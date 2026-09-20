@@ -12,6 +12,12 @@ description: >-
 Help a reviewer understand **what changes, how it works, why the important decisions are sound,
 and how to verify and recover it**. Allocate detail according to the decisions the reader must make.
 
+Resolve references relative to this SKILL.md. The same method applies standalone or inside a Harness
+capability invocation. When a Harness request is supplied, follow its operation (draft or review),
+input artifacts and local output directory; a shared design may cover several modules. Return
+documents/findings to the stage wrapper; do not change workflow state or imply user approval.
+Standalone design work does not require starting Harness.
+
 ## Operating principles
 
 - **Establish the core solution before choosing headings.** A polished outline cannot repair an
@@ -35,7 +41,8 @@ connections; do not restart discovery or require another outline approval.
 
 For a repository-backed draft or a change to the proposed behavior, first discover the relevant
 existing baseline using [recon inputs](references/recon-inputs.md). Prefer explicitly supplied
-reports, then project-declared artifact locations and the consumer repository's `.artifacts/`,
+reports (including a Harness request's `input_reports`/`input_artifacts`), then project-declared
+artifact locations and the consumer repository's `.artifacts/` and `.harness/runs/*/artifacts/`,
 including ignored/hidden files. This applies in a fresh session even when the user does not mention
 `brownfield-recon`; do not rely on conversation memory. Resolve paths from the consumer repository,
 not this Skill's installation directory.
@@ -101,11 +108,13 @@ Use the applicable checks in [review-checklist.md](references/review-checklist.m
 reader can restate the solution and walk the example; then inspect completeness. Fix missing reasoning
 and confusing structure, rather than adding a section solely to tick a box.
 
-Match the user's destination and operation. For a new document with no specified destination, use
-local Markdown in the project's document or artifact directory. For an existing document, preserve
-its location and relevant user annotations. Use the appropriate tools for the selected destination
-and their supported document and diagram formats. Verify the rendered diagrams when applicable
-and the final affected content.
+Match the user's destination and operation. Default to local Markdown in the supplied output
+directory; for a new document with no specified destination, use the project's document or artifact
+directory. For an existing document, preserve its location and relevant user annotations. External
+publication is a separate action through the user's selected tool and destination. Use the
+appropriate tools for the selected destination and their supported document and diagram formats.
+Verify the rendered diagrams when applicable and the final affected content. In review mode, return
+actionable findings and corrections instead of rewriting or publishing the document by default.
 
 Report what changed and any material unresolved issue. Keep the internal checklist and discarded outline
 out of the deliverable unless the user requests them.

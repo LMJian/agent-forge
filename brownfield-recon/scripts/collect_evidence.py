@@ -20,6 +20,7 @@ SCHEMA_VERSION = "brownfield-recon-evidence-v1"
 SKIP_DIRS = {
     ".git",
     ".artifacts",
+    ".harness",
     ".cache",
     ".idea",
     ".vscode",
@@ -491,8 +492,12 @@ def main() -> int:
         scopes = normalize_scopes(root, args.scope)
         output = None if args.output == "-" else Path(args.output).expanduser().resolve()
         if output is not None:
-            if output.is_relative_to(root) and output.relative_to(root).parts[0] != ".artifacts":
-                raise ValueError("output inside the repository must be under .artifacts/")
+            if output.is_relative_to(root):
+                parts = output.relative_to(root).parts
+                allowed = parts and (parts[0] == ".artifacts" or
+                                     (len(parts) >= 5 and parts[:2] == (".harness", "runs") and parts[3] == "artifacts"))
+                if not allowed:
+                    raise ValueError("output inside the repository must be under .artifacts/ or .harness/runs/<task>/artifacts/")
             if output.exists():
                 raise ValueError("evidence already exists; choose a new filename to preserve the baseline")
     except (ValueError, IndexError) as exc:

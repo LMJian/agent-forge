@@ -1,18 +1,20 @@
 {
-  "source": "User-supplied local skill packages, copied for portable distribution",
-  "copied_at": "2026-09-08",
+  "source": "Byte-identical copies of the standalone skills at the repository root (../brownfield-recon, ../server-tech-design); scripts/validate_distribution.py fails on drift",
+  "synced_at": "2026-09-20",
   "original_files": {
     "brownfield-recon": {
-      "SKILL.md": "e46a48e06cf384f8573c3327d050df6156c80cf0cf0a50561e27355c64d60703",
-      "references/report-contract.md": "d85605f0a76b5f36ba3aa198aded5ed9c8621c8214b0b06038fc813eccb77e5a",
-      "references/search-playbook.md": "68d4399282d71f2316d5f073d1130e08c285ee9a6d53ab035ce58a2134ea6453",
-      "scripts/collect_evidence.py": "c6e7cdbfdf36eda56e24c84b4008c0357757e94ad3bb9eb1442d7203915f05cf"
+      "SKILL.md": "4de8f3a4911d4fe4a88ba03fae2b33321a0461c1340bf0f9a760bec67e631cb7",
+      "agents/openai.yaml": "a838f069705573ef064d3df83811b785d005e950a904272c80d1f011e626fecb",
+      "references/report-contract.md": "573761fe0103f6d9ed99b18b7e78ae452abb1b427d41c6af74424dc884344d7c",
+      "references/search-playbook.md": "7a1c3f266794f111dfd63ea3593fabb56afe2f5f01e8cbf2bb989e5c323194dc",
+      "scripts/collect_evidence.py": "170a5e89bd95ba0e0b2f11728b005b40d60b4f0889a17399eba571355ba9f1c8"
     },
     "server-tech-design": {
-      "SKILL.md": "50893463c7ab2d01767e082c41f7ab5a570f7ea13be49f5677e3ee4e622b23d7",
-      "references/review-checklist.md": "46b2e2b43fbca69089c174caa7ae397b4d18b7b97c7218d16c2a321e5a430075",
-      "references/template.md": "e4a9e161184fb42a0e16faa21d617e49e69a3b4081bd7689e824d7de1acc215b",
+      "SKILL.md": "92b14abb249248690604d941118e90ecd89f81fd5c295f1a75e31749e96e5fbb",
+      "references/recon-inputs.md": "e702d5114ed8fb3791a3ceda48fd7ca0113796d4982f224a24d1e3f3735bb29f",
+      "references/review-checklist.md": "7f11e6cba29c6ba49eadf08116225e52bac8249b7c00b1efff2ceba407452b7b",
       "references/section-guide.md": "150a3fc34c4f8bcd852c12e441bd6c9a510a547a2535ccfc144c7bdff3cb3455",
+      "references/template.md": "e4a9e161184fb42a0e16faa21d617e49e69a3b4081bd7689e824d7de1acc215b",
       "references/writing-style.md": "b88c0c2e75c1600d5876f798aa471c7240cb73dba8abde7fc8ed5aaf6b4e6778"
     }
   }

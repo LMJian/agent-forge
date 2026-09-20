@@ -12,11 +12,11 @@ description: >-
 Help a reviewer understand **what changes, how it works, why the important decisions are sound,
 and how to verify and recover it**. Allocate detail according to the decisions the reader must make.
 
-Resolve references relative to this SKILL.md.
-When a Harness request is supplied, follow its operation (draft or review), input artifacts and local
-output directory. A shared design may cover several modules. Return documents/findings to the stage
-wrapper; do not change workflow state or imply user approval. Standalone design work does not require
-starting Harness.
+Resolve references relative to this SKILL.md. The same method applies standalone or inside a Harness
+capability invocation. When a Harness request is supplied, follow its operation (draft or review),
+input artifacts and local output directory; a shared design may cover several modules. Return
+documents/findings to the stage wrapper; do not change workflow state or imply user approval.
+Standalone design work does not require starting Harness.
 
 ## Operating principles
 
@@ -38,6 +38,21 @@ Adapt this workflow to the task. For a narrow edit, work from the existing desig
 connections; do not restart discovery or require another outline approval.
 
 ### 1. Establish the problem and the core solution
+
+For a repository-backed draft or a change to the proposed behavior, first discover the relevant
+existing baseline using [recon inputs](references/recon-inputs.md). Prefer explicitly supplied
+reports (including a Harness request's `input_reports`/`input_artifacts`), then project-declared
+artifact locations and the consumer repository's `.artifacts/` and `.harness/runs/*/artifacts/`,
+including ignored/hidden files. This applies in a fresh session even when the user does not mention
+`brownfield-recon`; do not rely on conversation memory. Resolve paths from the consumer repository,
+not this Skill's installation directory.
+
+Select reports by repository, task/scope, branch and source evidence, not modification time alone.
+Read the selected entry report and its relevant linked artifacts; check changes since its baseline,
+including uncommitted changes, before reusing consequential claims. Carry forward retain/replace/remove
+decisions, validation scenarios and phase-specific gaps. Investigate only missing or changed facts.
+If no applicable report exists, inspect the necessary code directly; neither recon nor Harness is a
+mandatory prerequisite. A wording-only edit can reuse the existing document's established inputs.
 
 Use the supplied material and relevant repository or document evidence to identify:
 - The current problem, intended outcome, audience, and scope of change.
@@ -72,6 +87,11 @@ them. Prefer a focused diagram when it reduces explanation; place details where 
 Use one primary explanation for a concept, contract, or failure rule. Annotated schema, field tables,
 and examples have different purposes; avoid repeating the same field reference in all three.
 
+Cite the baseline entry path, relevant source version and any newly verified differences near the
+decisions they support or in a short source note. Preserve the original recon files; place the design
+in a separate document at the requested destination. Keep inherited assumptions and pending checks
+visible without copying the full recon report or treating its readiness as design approval.
+
 ### 4. Revise by replacing and consolidating
 
 After a change, follow its dependencies through definitions, examples, diagrams, affected sections, and
@@ -88,11 +108,13 @@ Use the applicable checks in [review-checklist.md](references/review-checklist.m
 reader can restate the solution and walk the example; then inspect completeness. Fix missing reasoning
 and confusing structure, rather than adding a section solely to tick a box.
 
-Match the user's destination and operation. Default to local Markdown in the supplied output directory.
-For an existing document, preserve its location and relevant user annotations. External publication is
-a separate action through the user's selected tool and destination.
-Use readable headings, tables and diagrams, and verify the final affected content. In review mode,
-return actionable findings and corrections instead of rewriting or publishing the document by default.
+Match the user's destination and operation. Default to local Markdown in the supplied output
+directory; for a new document with no specified destination, use the project's document or artifact
+directory. For an existing document, preserve its location and relevant user annotations. External
+publication is a separate action through the user's selected tool and destination. Use the
+appropriate tools for the selected destination and their supported document and diagram formats.
+Verify the rendered diagrams when applicable and the final affected content. In review mode, return
+actionable findings and corrections instead of rewriting or publishing the document by default.
 
 Report what changed and any material unresolved issue. Keep the internal checklist and discarded outline
 out of the deliverable unless the user requests them.

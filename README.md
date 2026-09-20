@@ -115,7 +115,7 @@ $server-tech-design 根据需求和现有代码写一份本地 Markdown 技术�
 
 这是由 Agent 执行的 Skill 交接规则。具体格式与读取方式见 [调研输出契约](brownfield-recon/references/report-contract.md) 和 [设计输入发现规则](server-tech-design/references/recon-inputs.md)。
 
-Harness 已在 `harness-devflow/skills/` 内包含两个专业 Skill 及必要资源，无需再安装根目录的独立版本。存量调研在 intake 内按需调用；服务端设计与设计审查使用包内 `server-tech-design`，其他领域保留通用设计路径。
+Harness 已在 `harness-devflow/skills/` 内包含两个专业 Skill 及全部资源，无需再安装根目录的独立版本。包内副本与根目录独立版本逐字节一致（`validate_distribution.py` 会校验），遵循同一套报告契约：独立调研写入 `.artifacts/` 的报告可以作为 Harness 任务的输入，Harness 任务写入 `.harness/runs/<task>/artifacts/` 的报告也可以被后续独立设计会话直接复用。修改时同时更新两处。存量调研在 intake 内按需调用；服务端设计与设计审查使用包内 `server-tech-design`，其他领域保留通用设计路径。
 
 ## 目录与分享
 

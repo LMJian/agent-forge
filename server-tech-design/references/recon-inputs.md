@@ -11,17 +11,20 @@ external knowledge service or separate JSON manifest is required.
    different base. An explicitly requested historical baseline keeps that role; a newer report does
    not silently replace it.
 2. Inspect the project's instructions or existing document index for its artifact convention. Search
-   those relevant locations and `.artifacts/` when present. Recon commonly writes
-   `.artifacts/brownfield-recon/<branch-key>/<run-id>/report.md`, but project-specific layouts and report
-   names are valid. User-selected external locations need an explicit path or a project reference.
+   those relevant locations, `.artifacts/` and `.harness/runs/` when present. Standalone recon
+   commonly writes `.artifacts/brownfield-recon/<branch-key>/<run-id>/report.md`; a Harness task
+   writes `.harness/runs/<task>/artifacts/capabilities/<id>/report.md` and lists it in the request's
+   `input_reports`. Both follow the same report contract; project-specific layouts and report
+   names are also valid. User-selected external locations need an explicit path or a project reference.
 3. List candidate Markdown filenames before opening content. Include hidden and ignored artifacts;
    an ordinary repository search often omits `.artifacts/`. For a present default root, for example:
 
    ```bash
    rg --files --hidden --no-ignore .artifacts -g '*.md' -g '!**/.git/**'
+   rg --files --hidden --no-ignore .harness/runs -g '*.md' -g '!**/.git/**'
    ```
 
-   Use the corresponding explicit path for a custom root. Narrow candidates by task/module names,
+   Run each command only for a root that exists; use the corresponding explicit path for a custom root. Narrow candidates by task/module names,
    report entrypoints and relevant indexes, then inspect their opening scope metadata. Expand only
    when those candidates do not resolve the input. Do not scan personal Skill directories or unrelated
    repositories, follow symlinks outside the selected roots, or read credentials to discover reports.

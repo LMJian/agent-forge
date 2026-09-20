@@ -13,8 +13,11 @@ The distribution includes:
   template and review references.
 
 Resources resolve from the plugin's own location. Both skills write to the local output directory
-supplied in the capability request. Resource provenance is recorded in
-[bundled-skill-origins.json](bundled-skill-origins.json). The collector excludes Harness-generated
+supplied in the capability request. The bundled copies are byte-identical to the standalone skills
+distributed beside this plugin and follow the same report contract, so a standalone recon report
+under `.artifacts/` can be supplied as a Harness input report, and a Harness recon report under
+`.harness/runs/<task>/artifacts/` can be reused by a later standalone design session. Resource
+provenance and the drift check are recorded in [bundled-skill-origins.json](bundled-skill-origins.json). The collector excludes Harness-generated
 runtime data from its evidence inventory.
 
 | Slot | Harness stage | Auto choice |

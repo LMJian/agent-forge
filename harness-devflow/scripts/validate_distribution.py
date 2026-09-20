@@ -53,6 +53,28 @@ def validate(root=ROOT):
         for file in files:
             if not (root / "skills" / name / file).is_file():
                 errors.append(f"Missing bundled capability resource: {name}/{file}")
+    errors.extend(bundled_drift(root))
+    return errors
+
+
+def skill_files(directory):
+    return {str(p.relative_to(directory)): p.read_bytes() for p in directory.rglob("*")
+            if p.is_file() and p.name != ".DS_Store" and "__pycache__" not in p.parts}
+
+
+def bundled_drift(root):
+    """Bundled capabilities must stay byte-identical to the standalone copies beside the plugin, when present."""
+    errors = []
+    for name in sorted(BUNDLED_CAPABILITIES):
+        standalone = root.parent / name
+        if not standalone.is_dir():
+            continue
+        bundled, source = skill_files(root / "skills" / name), skill_files(standalone)
+        for path in sorted(set(bundled) ^ set(source)):
+            errors.append(f"Bundled {name} differs from standalone copy: {path} exists on one side only")
+        for path in sorted(set(bundled) & set(source)):
+            if bundled[path] != source[path]:
+                errors.append(f"Bundled {name} differs from standalone copy: {path}")
     return errors
 
 

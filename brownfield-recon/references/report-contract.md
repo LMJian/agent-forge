@@ -4,8 +4,12 @@ The output should support the next decision. Scale its form to the scope and aud
 
 ## Location and discoverable entry
 
-Use the user's selected output directory or the project's artifact convention. Without either, write
-`.artifacts/brownfield-recon/<branch-key>/<run-id>/report.md` inside the consumer repository. The branch
+Use the Harness request's `output_directory`, the user's selected output directory or the project's
+artifact convention. Without any of these, write
+`.artifacts/brownfield-recon/<branch-key>/<run-id>/report.md` inside the consumer repository. A
+Harness-managed report lives at `.harness/runs/<task>/artifacts/capabilities/<id>/report.md`; it
+follows this same contract so a later standalone design session can read it, and a standalone
+report under `.artifacts/` can likewise be supplied to a Harness task as an input report. The branch
 key is a safe directory label, not a substitute for the actual Git branch recorded below. Use a task
 key for non-Git sources. Keep each baseline under a distinct run ID; never silently overwrite an old
 report to make it describe the new code. An existing project report name or directory remains valid.

@@ -15,6 +15,7 @@ checklist or a sequence of “not applicable” explanations into the document u
 
 ## Is the relevant design complete and evidenced?
 
+- [ ] Applicable existing recon was discovered from supplied/project artifact locations, including hidden or ignored `.artifacts`; reused claims match this repository, task and relevant current code, and the baseline is cited without being overwritten.
 - [ ] The proposed choice and meaningful trade-offs are explained; no alternative was invented just to fill a table.
 - [ ] Changed contracts, state and configuration behavior, compatibility, and consequential failure paths are specified.
 - [ ] Relevant authorization, isolation, sensitive-data, outbound-access, and resource boundaries remain visible.

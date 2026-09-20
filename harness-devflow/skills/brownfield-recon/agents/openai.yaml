@@ -1,0 +1,4 @@
+interface:
+  display_name: "存量逻辑调研"
+  short_description: "围绕当前改动核实现状与目标差异，确认兼容边界、必要验证和开始开发的条件"
+  default_prompt: "Use $brownfield-recon to establish a concise, evidence-backed baseline for this change, distinguish current behavior from the accepted target, and identify what to retain, replace or remove before continuing authorized work."
