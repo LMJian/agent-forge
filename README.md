@@ -9,6 +9,7 @@
 | [harness-devflow](harness-devflow/README.md) | 完整研发流程插件 | 按任务选择流程深度，支持引导或自主执行、宿主适配、检查点验证和任务恢复。 |
 | [brownfield-recon](brownfield-recon/SKILL.md) | 独立 Skill | 调研已有代码、接口契约和失败路径，形成修改前的行为基线与保留／替换／移除判断。 |
 | [server-tech-design](server-tech-design/SKILL.md) | 独立 Skill | 编写、评审和优化服务端技术方案，讲清主流程、关键决策与相关工程约束。 |
+| [codex-agent-rules](codex-agent-rules/README.md) | 全局 `AGENTS.md` 模板 | 使用 Computer Use 前要求明确授权，并限制大范围读取、重复失败和冗长工具输出。 |
 
 ## 开始使用
 
@@ -20,6 +21,7 @@ git clone https://github.com/LMJian/skills.git
 
 - **完整研发任务**：加载或安装克隆目录中的 `harness-devflow/`，在目标代码仓库中调用 `flow`。插件已包含两个专业 Skills 及其资源。
 - **聚焦调研或设计**：单独加载 `brownfield-recon/` 或 `server-tech-design/`，也可以让 Agent 阅读对应的 `SKILL.md`。
+- **设置个人执行规则**：将 `codex-agent-rules/AGENTS.md` 安装或合并到 `~/.codex/AGENTS.md`，让新会话默认遵循 Computer Use 授权与低消耗执行约定。
 
 在 Codex 安装插件后，可用 `$harness-devflow:flow` 启动；Claude Code 可通过 `claude --plugin-dir /absolute/path/skills/harness-devflow` 加载，再调用 `/harness-devflow:flow`。具体接入、项目初始化和命令配置见 [插件使用说明](harness-devflow/README.md#获取与使用)。
 
@@ -103,6 +105,7 @@ $server-tech-design 根据需求和现有代码写一份本地 Markdown 技术�
 - 只需要理解或调研现有实现：使用 `brownfield-recon`。
 - 已有清楚的需求和背景，只需要方案编写或评审：使用 `server-tech-design`。
 - 需要持续推进需求、实现、验证和交付，并保存可恢复状态：使用 `harness-devflow`。
+- 需要为所有 Codex 项目统一 Computer Use 授权和工具输出约束：安装 `codex-agent-rules/AGENTS.md`。
 
 两个独立 Skills 也有明确的产物交接约定，支持在不同会话中先调研、再设计：
 
@@ -119,6 +122,7 @@ Harness 已在 `harness-devflow/skills/` 内包含两个专业 Skill 及必要�
 ```text
 .
 ├── README.md
+├── codex-agent-rules/      # Codex 全局规则模板与安装说明
 ├── harness-devflow/        # 完整插件：宿主清单、Skills、运行时、文档和测试
 ├── brownfield-recon/       # 独立调研 Skill 及配套资源
 └── server-tech-design/     # 独立设计 Skill 及配套资源
@@ -128,5 +132,6 @@ Harness 已在 `harness-devflow/skills/` 内包含两个专业 Skill 及必要�
 
 - 完整开发流程：使用 `harness-devflow/`，按 [插件接入说明](harness-devflow/README.md#获取与使用) 加载或安装。
 - 独立调研或设计：将 `brownfield-recon/` 或 `server-tech-design/` 完整目录放入所用宿主的 Skills 目录，也可在任务中指定其 `SKILL.md` 路径使用。
+- 全局执行规则：参考 [codex-agent-rules](codex-agent-rules/README.md) 将模板安装或合并到个人 Codex 主目录。
 
 分享时可以提供本仓库链接或复制所需的完整目录。复制插件时保留 `.codex-plugin/`、`.claude-plugin/` 等隐藏目录；复制 Skill 时保留配套的 `references/`、`scripts/` 等资源。
