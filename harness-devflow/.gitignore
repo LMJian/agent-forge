@@ -4,3 +4,4 @@ __pycache__/
 dist/
 .harness/runs/
 .harness/worktrees/
+.DS_Store
