@@ -85,3 +85,30 @@ test list. Keep design output separate from recon and use the user's requested d
 If no usable baseline exists, do the focused code inspection needed for the design and identify
 the missing evidence. Do not start a full audit, install another Skill or block all design work
 merely because an upstream report is absent.
+
+## Claim-level anchors
+
+For a claim that determines behavior, compatibility, cost or readiness, give a compact anchor near the
+claim or in a shared source note. Reuse an anchor when several statements rely on the same evidence;
+do not create a provenance table for every sentence.
+
+| Evidence | Minimum useful anchor | Claim boundary |
+|---|---|---|
+| Code or configuration | Repository, branch/commit or explicit working-tree snapshot; file and line; function/type or configuration key and its read site | Proves behavior present in that snapshot. A declaration alone does not prove the configuration is used. |
+| Design or decision | Actual document link/ID, section or comment/message locator, revision/date if known | Distinguish a proposal, an accepted decision and a source's statement about deployment. |
+| Runtime observation | Environment, observation time, deployment revision if available, and log/trace/metric/result locator | Supports only the observed environment and scope. Missing version correlation remains a gap. |
+| New design choice | The requirement/constraint and the evidence supporting the choice | Label proposed behavior; there may be no implementation or runtime proof yet. |
+
+For local Markdown, use clickable absolute code paths with a verified line when available. For an
+external document, prefer a verified repository permalink pinned to the observed commit; otherwise
+give repository-relative path, commit and symbol without inventing a link. Generated-code-only anchors
+are insufficient when the claim concerns business behavior: locate the implementation or state the gap.
+
+Identify whether a claim was freshly checked or inherited from recon. Local HEAD is not automatically
+the current remote branch or deployed version. When that distinction affects the decision, verify it
+using authorized read-only access or qualify the claim as a local snapshot. Do not refresh unrelated
+evidence or require production access for an ordinary proposed design.
+
+If the document and current code disagree, state both anchors and the consequence for the proposed
+change. Verify the affected path; do not choose whichever source looks newer or silently turn a
+historical design into current behavior. If line numbers drift after an edit, refresh the affected anchors.

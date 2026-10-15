@@ -1,6 +1,6 @@
 ---
 name: flow
-description: "Run or resume a development task with guided checkpoints, optional autonomous execution, portable evidence and host capability fallback."
+description: "Run or resume Harness development, review existing changes, coordinate repository tasks, or deliver through an explicit pushed/PR/merged/deployed endpoint."
 ---
 
 # Development workflow
@@ -8,6 +8,8 @@ description: "Run or resume a development task with guided checkpoints, optional
 Use for a requested development workflow or an existing Harness task. A question about a
 workflow does not start one. Resolve the plugin root from this file's location; the consumer
 repository is the user's target checkout. Read [the runtime contract](references/runtime.md).
+Use [workflow ownership](../../references/routing.md) to select one orchestrator. Never start
+a second workflow over an active task just because a similarly named skill is available.
 
 ## Start or continue
 
@@ -28,8 +30,13 @@ repository is the user's target checkout. Read [the runtime contract](references
    profile and endpoint. A Git repository with an initial commit is required. Detached HEAD
    and existing uncommitted changes are supported; preserve user changes.
 6. Start with `start --goal ... --profile ... --assistance ... --target ... --domain ...`.
+   For an existing diff, use `start-review --goal ... --base <verified-baseline> --acceptance ...`
+   instead of inventing intake/plan/implementation history. Use `--target pushed` when the
+   user requests only a push; it does not create a PR. See [focused tasks](../../references/focused-tasks.md).
    For a started task, run `next`. Read its action, inputs and returned Skill path. That command
    starts a pending stage and produces a concrete work packet. `status` is read-only.
+   Read only needed `inputs`; after reading, optionally `ack-context <content_id>` so unchanged
+   material is identifiable on the next packet. Use `context --all` only for missing historical context.
 7. Execute the returned action and submit the actual result. Repeat `next` while authorized
    work remains. Finish at the selected endpoint. An internal routing message is not delivery.
 
@@ -69,6 +76,12 @@ before planning; an active implementation cannot weaken its checkpoint requireme
 `handoff --output <new-file>` records the project goal, next action and artifact references for
 another host in the same checkout. `export` produces a human-readable progress report. `abort`
 stops the task; separately cancel any real scheduler when authorized. Neither action deletes worktrees.
+
+For multiple Git repositories, keep one task per repository. At the committed integration
+baseline, use `link-repositories --manifest FILE`, run the selected shared integration check,
+and `record-group-check`. Inspect `repositories-status` before declaring the whole change
+verified. A version-string match alone is not behavioral integration evidence; see
+[repository groups](../../references/repository-groups.md).
 
 Only interfaces, integration and knowledge may be skipped with an actual applicability reason.
 Missing credentials, failed checks or unavailable required infrastructure are blockers. Native

@@ -99,10 +99,15 @@ class Workflow:
                                 "action": action, **details})
         atomic_json(self.path, state)
 
-    def start(self, goal: str, base_ref: str | None = None, *, options: dict | None = None) -> dict:
+    def start(self, goal: str, base_ref: str | None = None, *, options: dict | None = None,
+              acceptance: list[str] | None = None) -> dict:
         nonempty(goal, "goal")
         config = self.config
         workflow = resolve_workflow(config, options)
+        if workflow["entry"] == "review":
+            strings(acceptance, "existing-change acceptance")
+        else:
+            require(acceptance is None, "Acceptance override is only for start-review")
         branch = vcs.branch(self.root)
         base = base_ref or config["base_ref"] or vcs.head(self.root)
         nonempty(base, "base_ref")
@@ -129,6 +134,9 @@ class Workflow:
                      "workflow": workflow, "workflow_overrides": options or {}, "stages": {},
                      "runs": [], "capability_uses": [], "modules": {}, "waves": [], "wave_index": 0,
                      "history": [], "events": []}
+            if workflow["entry"] == "review":
+                state["review_context"] = {"acceptance": acceptance, "base_sha": base_sha,
+                                           "scope": "base through HEAD plus staged, unstaged and untracked changes"}
             state["stages"] = {s: policy_stage(state, s) for s in workflow["order"]}
             self.save(state, "start", workflow=workflow)
         return self.summary(state)
@@ -145,6 +153,12 @@ class Workflow:
                 if stage in CODE_BOUND:
                     code = code or vcs.fingerprint(self.root)
                     require(item.get("fingerprint") == code, "Code changed after verification")
+                if stage == "review":
+                    from .reuse import validate_receipt
+                    report = self.report_for(state, stage)
+                    for receipt in state["runs"]:
+                        if receipt["id"] in report.get("checks", []):
+                            validate_receipt(self, state, receipt)
             except (HarnessError, ValueError, KeyError) as error:
                 problems.append({"stage": stage, "reason": str(error)})
         return problems
@@ -233,7 +247,14 @@ class Workflow:
                     f"Invalid or failed check receipt: {run_id}")
             require(receipt["fingerprint"] == code and receipt["config_hash"] == state["execution_hash"],
                     f"Stale check receipt: {run_id}")
+            require(not any(r["kind"] == "check" and r["name"] == receipt["name"] and
+                            r["stage"] == stage and r["epoch"] == receipt["epoch"] and
+                            r.get("module") is None and r["status"] == "failed"
+                            for r in state["runs"][state["runs"].index(receipt) + 1:]),
+                    "A newer failed check supersedes the supplied receipt")
             verify_snapshots(self.root, receipt["evidence"])
+            from .reuse import validate_receipt
+            validate_receipt(self, state, receipt)
             found.add(receipt["name"])
         require(set(names) <= found, f"Missing required checks: {sorted(set(names) - found)}")
 
@@ -510,6 +531,8 @@ class Workflow:
         require(not any(r["status"] in {"running", "unresolved"} for r in state["runs"]),
                 "A command is in flight; inspect it before changing workflow configuration")
         old = state["workflow"]
+        require(old.get("entry", "develop") == workflow["entry"],
+                "Cannot change a task's entry; start a new task for a different scope")
         require(old["assistance"] == workflow["assistance"] or not state["modules"],
                 "Choose assistance before implementation planning; an active task cannot weaken its checkpoints")
         changed = set(affected or ())

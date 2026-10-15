@@ -64,6 +64,27 @@ def parser() -> argparse.ArgumentParser:
     start.add_argument("--goal", required=True)
     start.add_argument("--base")
     add_workflow_flags(start)
+    review = commands.add_parser("start-review", help="Review existing changes without manufacturing development history")
+    review.add_argument("--goal", required=True)
+    review.add_argument("--base", required=True, help="Explicit review baseline; must be an ancestor")
+    review.add_argument("--acceptance", action="append", required=True)
+    review.add_argument("--target", choices=TARGETS, default="local")
+    context = commands.add_parser("context", help="Read stage-specific references without advancing state")
+    context.add_argument("--all", action="store_true", dest="all_inputs")
+    context.add_argument("--module")
+    seen = commands.add_parser("ack-context", help="Record that the current content ID was read; does not approve evidence")
+    seen.add_argument("content_id")
+    reuse = commands.add_parser("reuse-check", help="Explicitly reuse a deterministic local review check for identical inputs")
+    reuse.add_argument("name")
+    reuse.add_argument("--from", required=True, dest="source_id")
+    group = commands.add_parser("link-repositories", help="Pin independent repository tasks without modifying them")
+    group.add_argument("--manifest", required=True)
+    group_status = commands.add_parser("repositories-status")
+    group_status.add_argument("group")
+    group_check = commands.add_parser("record-group-check")
+    group_check.add_argument("group")
+    group_check.add_argument("--repository", required=True)
+    group_check.add_argument("--run", required=True)
     configure = commands.add_parser("configure-flow", help="Change task scope with recorded evidence invalidation")
     configure.add_argument("--reason", required=True)
     add_workflow_flags(configure)
@@ -195,11 +216,31 @@ def execute(args: argparse.Namespace) -> dict:
         return gates.check_push(root, sys.stdin.read())
     if args.command == "knowledge-search":
         return knowledge.search(root, args.query, args.limit)
+    if args.command in {"link-repositories", "repositories-status", "record-group-check"}:
+        from . import groups
+        if args.command == "link-repositories":
+            return groups.link(root, args.manifest)
+        if args.command == "repositories-status":
+            return groups.status(root, args.group)
+        return groups.record(root, args.group, args.repository, args.run)
     require(args.task, "--task is required for workflow commands")
     w = Workflow(root, args.task)
     cmd = args.command
     if cmd == "start":
         return w.start(args.goal, args.base, options=selected_options(args))
+    if cmd == "start-review":
+        return w.start(args.goal, args.base, options={"entry": "review", "profile": "light", "target": args.target,
+                       "stages": {name: False for name in ("design", "design_audit", "test_design", "design_approval", "interfaces")}},
+                       acceptance=args.acceptance)
+    if cmd == "context":
+        from .context import references
+        return {"inputs": references(w, w.load(), all_inputs=args.all_inputs, module=args.module)}
+    if cmd == "ack-context":
+        from .context import acknowledge
+        return acknowledge(w, args.content_id)
+    if cmd == "reuse-check":
+        from .reuse import reuse
+        return reuse(w, args.name, args.source_id)
     if cmd == "configure-flow":
         return w.configure_flow(selected_options(args), args.reason)
     if cmd == "status":

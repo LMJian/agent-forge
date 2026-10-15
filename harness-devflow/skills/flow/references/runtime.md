@@ -123,7 +123,7 @@ Checks that change tested bytes fail. Native bridge transport logs are retained 
 Single-module checkout execution supports dirty working trees. Isolated worktrees require a
 clean wave base and committed implementation for merging. Final local review/integration may
 verify uncommitted bytes. Any subsequent commit or byte change invalidates code-bound evidence.
-Remote delivery requires clean reviewed code. After naming a verified detached checkout with Git or the host, use `bind-branch --reason ...` to record the branch without changing its verified fingerprint. Review's configured age limit applies at push.
+Opt-in deterministic local review checks may be explicitly reused across commits with identical inputs using `reuse-check`; the final review must still be reopened and bound to current HEAD. See [focused tasks](../../../references/focused-tasks.md). Remote delivery requires clean reviewed code. After naming a verified detached checkout with Git or the host, use `bind-branch --reason ...` to record the branch without changing its verified fingerprint. Review's configured age limit applies at push.
 
 ## Recovery, approval and delivery
 
@@ -172,3 +172,9 @@ complete with their stage result. See [professional handoff](../../../references
 CLI codes: success/pending observation 0; failed/unresolved execution or incomplete doctor 1;
 invalid input, missing prerequisites or blocked state 2. Retry budgets are bounded. A native
 scheduler/worker handle is accepted only after actual creation and does not prove completion.
+
+## Focused entry and repository groups
+
+`start-review --goal ... --base ... --acceptance ... [--target pushed]` reviews existing changes without development history. `context [--all] [--module ID]` reads artifact references; `ack-context CONTENT_ID` records actual reading only.
+
+Group commands do not require `--task`: `link-repositories --manifest FILE`, `repositories-status GROUP`, `record-group-check GROUP --repository ID --run RUN_ID`. They keep each repository task independent and validate shared integration evidence; see [repository groups](../../../references/repository-groups.md).

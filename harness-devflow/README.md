@@ -37,6 +37,7 @@ intake → design → design_audit → test_design → design_approval
 | 交付终点 | 结束条件 |
 | --- | --- |
 | `local` | 本地实现和验证完成，可以保留未提交修改 |
+| `pushed` | 推送已验证提交并核验远端 SHA；不创建 PR/MR |
 | `pr` | 推送已验证提交并创建真实 PR/MR |
 | `merged` | 观察到 PR/MR 已合并 |
 | `deployed` | 具体发布方案获得批准，部署返回成功结果 |
@@ -103,7 +104,7 @@ python3 /absolute/path/harness-devflow/scripts/harness.py --repo /path/to/projec
 
 `next` 返回当前阶段、必要资料、专业方法和具体操作，并启动尚未开始的当前阶段。Agent 完成工作后使用 `submit --result <file>` 提交结果正文；机器报告外壳和可用检查记录由运行时生成。`status` 只读查看，`handoff --output <file>` 写出可在其他宿主读取的任务包。
 
-支持在 detached HEAD 工作区和有未提交修改的工作区启动。本地单模块可直接验证未提交内容；需要隔离并合并的模块仍要求干净起点及模块提交。提交变化会使旧检查失效，远端交付只接受经过验证的明确提交。
+支持在 detached HEAD 工作区和有未提交修改的工作区启动。本地单模块可直接验证未提交内容；需要隔离并合并的模块仍要求干净起点及模块提交。提交变化仍使最终审查失效；显式启用的确定性测试可在输入不变时复用，最终审查和远端交付仍绑定明确提交。
 
 配置示例：[Python 引导执行](examples/python-light.json)、[Python 标准流程](examples/python-local.json)、[Node](examples/node-local.json)。用项目真实命令替换示例中的工具和目录。
 
@@ -137,3 +138,10 @@ python3 scripts/validate_distribution.py
 - [专业能力交接](references/capabilities.md)
 - [交付适配器](references/adapters.md)
 - [验证记录](docs/validation.md)
+
+## 已有改动、检查复用与跨仓库协作
+
+- [轻量接手与检查复用](references/focused-tasks.md)：`start-review` 直接审查已有改动；`pushed` 支持只推送；确定性测试显式复用，最终审查重新绑定提交。
+- [跨仓库关联](references/repository-groups.md)：独立任务、固定提交、依赖声明和真实联调记录共同构成总任务证据。
+- [流程归属](references/routing.md)：一个任务只使用一个流程引擎，保留已有任务与明确选择。
+- `next` 按阶段和模块筛选资料；`ack-context` 记录已读版本，`context --all` 按需查看完整历史。

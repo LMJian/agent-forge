@@ -1,6 +1,6 @@
-# Personal Skills
+# Skills
 
-面向 AI 辅助研发的 Skills 与插件集合，覆盖存量代码调研、服务端技术方案，以及从需求到实现、验证和交付的完整开发流程。可以单独使用专业 Skill，也可以通过 `harness-devflow` 组织连续研发任务，保存上下文、产物与真实检查记录。
+面向 AI 辅助研发与个人学习的 Skills 与插件集合，覆盖飞书事项背景收集、存量代码调研、服务端技术方案、旅行英语练习，以及从需求到实现、验证和交付的完整开发流程。可以单独使用专业 Skill，也可以通过 `harness-devflow` 组织连续研发任务，保存上下文、产物与真实检查记录。
 
 ## 项目一览
 
@@ -9,6 +9,8 @@
 | [harness-devflow](harness-devflow/README.md) | 完整研发流程插件 | 按任务选择流程深度，支持引导或自主执行、宿主适配、检查点验证和任务恢复。 |
 | [brownfield-recon](brownfield-recon/SKILL.md) | 独立 Skill | 调研已有代码、接口契约和失败路径，形成修改前的行为基线与保留／替换／移除判断。 |
 | [server-tech-design](server-tech-design/SKILL.md) | 独立 Skill | 编写、评审和优化服务端技术方案，讲清主流程、关键决策与相关工程约束。 |
+| [lark-context-explore](lark-context-explore/SKILL.md) | 独立 Skill | 从飞书文档、消息、会议等来源收集事项背景，形成带出处、时间线和待确认问题的交接包。 |
+| [travel-english-coach](travel-english-coach/SKILL.md) | 独立 Skill | 面向英语基础薄弱者，通过旅行场景练习表达、澄清和求助，保存学习进度并安排复习。 |
 | [codex-agent-rules](codex-agent-rules/README.md) | 全局 `AGENTS.md` 模板 | 使用 Computer Use 前要求明确授权，并限制大范围读取、重复失败和冗长工具输出。 |
 
 ## 开始使用
@@ -21,6 +23,8 @@ git clone https://github.com/LMJian/skills.git
 
 - **完整研发任务**：加载或安装克隆目录中的 `harness-devflow/`，在目标代码仓库中调用 `flow`。插件已包含两个专业 Skills 及其资源。
 - **聚焦调研或设计**：单独加载 `brownfield-recon/` 或 `server-tech-design/`，也可以让 Agent 阅读对应的 `SKILL.md`。
+- **收集飞书事项背景**：加载 `lark-context-explore/`，提供项目名、文档链接或群等线索，整理可追溯的背景包。
+- **练习旅行英语**：加载 `travel-english-coach/`，核对固定档案位置后，读取已有进度或开始首个旅行场景。
 - **设置个人执行规则**：将 `codex-agent-rules/AGENTS.md` 安装或合并到 `~/.codex/AGENTS.md`，让新会话默认遵循 Computer Use 授权与低消耗执行约定。
 
 在 Codex 安装插件后，可用 `$harness-devflow:flow` 启动；Claude Code 可通过 `claude --plugin-dir /absolute/path/skills/harness-devflow` 加载，再调用 `/harness-devflow:flow`。具体接入、项目初始化和命令配置见 [插件使用说明](harness-devflow/README.md#获取与使用)。
@@ -38,7 +42,7 @@ git clone https://github.com/LMJian/skills.git
 | 配置 | 选择 | 作用 |
 | --- | --- | --- |
 | 流程深度 `profile` | `light` / `standard` / `release` | 决定需要哪些设计、审查和确认阶段，默认 `standard` |
-| 交付终点 `target` | `local` / `pr` / `merged` / `deployed` | 决定完成到本地验证、评审请求、合并还是部署 |
+| 交付终点 `target` | `local` / `pushed` / `pr` / `merged` / `deployed` | 决定完成到本地验证、远端推送、评审请求、合并还是部署 |
 | 执行引导 `assistance` | `guided` / `autonomous` | 决定逐任务检查点或连续执行，默认 `guided` |
 | 宿主能力 `host` | 当前实际可用的工具与适配器 | 决定使用宿主能力还是内置执行，默认使用内置能力 |
 
@@ -48,7 +52,7 @@ git clone https://github.com/LMJian/skills.git
 | `standard` | 需求 → 设计 → 设计审查 → 测试设计 → 计划 → 实现 → 审查与验证 | 本地完成 |
 | `release` | 标准流程，增加设计确认，随后执行远端交付与发布部署 | 部署完成 |
 
-开发深度与交付终点独立选择：`local` 在本地验证后完成，`pr` 在创建评审请求后完成，`merged` 等待合并，`deployed` 完成发布确认和部署验证。接口更新、集成测试、知识归档按需启用；单模块默认使用当前分支，多模块可通过 worktree 按依赖批次实现与合并。
+开发深度与交付终点独立选择：`local` 在本地验证后完成，`pushed` 在推送已审查提交并核对实际推送目标的远端分支后完成，`pr` 在创建评审请求后完成，`merged` 等待合并，`deployed` 完成发布确认和部署验证。接口更新、集成测试、知识归档按需启用；单模块默认使用当前分支，多模块可通过 worktree 按依赖批次实现与合并。
 
 `guided` 引导执行按计划逐个完成可验证的小任务，并记录真实检查点，适合需要明确步骤和更强过程约束的任务。`autonomous` 自主执行允许连续实现和有序批量提交，两种方式共用验收与交付门禁。模式由项目和用户选择，不按模型或厂商名称自动判断。
 
@@ -68,7 +72,7 @@ $harness-devflow:flow 查看当前任务状态并继续。
 
 完整阶段、Skills、宿主接入和配置说明见 [插件 README](harness-devflow/README.md)；专业能力的输入、产物及报告转换见 [能力接入契约](harness-devflow/references/capabilities.md)。
 
-1.0.0 已通过 **102 项行为测试**，覆盖内置执行、宿主适配契约、工作树、检查点、证据失效和任务恢复。插件清单、16 个 Skills 和发行目录校验通过；测试环境与覆盖范围见 [验证记录](harness-devflow/docs/validation.md)。这些测试验证流程和运行时行为，不代表不同模型已达到相同的编码质量。
+自动化测试覆盖内置执行、宿主适配契约、工作树、检查点、证据失效和任务恢复。运行方式及覆盖边界见 [验证说明](harness-devflow/docs/validation.md)。
 
 ## brownfield-recon：存量逻辑调研
 
@@ -100,11 +104,37 @@ $brownfield-recon 梳理这个仓库的请求路由、配置加载和失败处�
 $server-tech-design 根据需求和现有代码写一份本地 Markdown 技术方案，先讲清主流程和关键决策，保留必要约束。
 ```
 
+## lark-context-explore：飞书事项上下文收集
+
+从项目名、文档链接、群名等线索出发，查询相关文档、消息、会议和人员，整理现状、时间线、关键决策、关系与未决问题。每项结论保留出处，并标明查询时间和覆盖边界。
+
+默认生成本地 `background.md` 和会话摘要；飞书文档、HTML 或妙搭发布按用户明确要求执行。依赖 `lark-cli` 及当前用户已有权限，运行时按需读取相关领域 Skill。随包提供断点、预算、证据和产物校验脚本，以及离线测试。
+
+```text
+$lark-context-explore 根据这个飞书文档，整理项目背景、关键决策和未决问题，生成本地交接包。
+```
+
+完整范围和授权边界见 [Skill 说明](lark-context-explore/SKILL.md)，离线验证方式见 [维护验证](lark-context-explore/references/evaluation.md)。
+
+## travel-english-coach：旅行英语练习
+
+面向英语基础薄弱者，以点餐、问路、机场、酒店等场景逐轮练习，重点训练表达需求、确认关键信息和主动澄清。默认采用可调整的六个月计划；根据实际表现和出行时间安排进度，区分提示后完成与无提示独立完成。文字练习只评估可观察到的文字表现，发音和听力需有相应音频证据。
+
+随包提供本地进度脚本、命令说明、教学决策场景和回归测试。进度脚本支持能力评估按名称合并、损坏档案拒写、版本冲突检查、课次与复习项查询，以及根据真实复习结果计算下次日期。
+
+学习档案默认保存在 `~/.local/share/travel-english-coach/`，与 Skill 目录分开。可通过 `settings.json` 配置其他固定目录；更新已有安装时保留原配置及档案。脚本依赖 Python 3 标准库，支持 macOS/Linux，具体命令见 [档案说明](travel-english-coach/references/progress.md)。
+
+```text
+$travel-english-coach 开始今天的练习，先读取我的学习进度。
+```
+
 ## 如何选择与组合
 
 - 只需要理解或调研现有实现：使用 `brownfield-recon`。
 - 已有清楚的需求和背景，只需要方案编写或评审：使用 `server-tech-design`。
 - 需要持续推进需求、实现、验证和交付，并保存可恢复状态：使用 `harness-devflow`。
+- 需要从飞书多种来源整理事项背景或交接材料：使用 `lark-context-explore`。
+- 需要持续练习旅行英语并接续学习进度：使用 `travel-english-coach`。
 - 需要为所有 Codex 项目统一 Computer Use 授权和工具输出约束：安装 `codex-agent-rules/AGENTS.md`。
 
 两个独立 Skills 也有明确的产物交接约定，支持在不同会话中先调研、再设计：
@@ -115,7 +145,22 @@ $server-tech-design 根据需求和现有代码写一份本地 Markdown 技术�
 
 这是由 Agent 执行的 Skill 交接规则。具体格式与读取方式见 [调研输出契约](brownfield-recon/references/report-contract.md) 和 [设计输入发现规则](server-tech-design/references/recon-inputs.md)。
 
-Harness 已在 `harness-devflow/skills/` 内包含两个专业 Skill 及全部资源，无需再安装根目录的独立版本。包内副本与根目录独立版本逐字节一致（`validate_distribution.py` 会校验），遵循同一套报告契约：独立调研写入 `.artifacts/` 的报告可以作为 Harness 任务的输入，Harness 任务写入 `.harness/runs/<task>/artifacts/` 的报告也可以被后续独立设计会话直接复用。修改时同时更新两处。存量调研在 intake 内按需调用；服务端设计与设计审查使用包内 `server-tech-design`，其他领域保留通用设计路径。
+Harness 已在 `harness-devflow/skills/` 内包含两个专业 Skill 及全部资源，无需再安装根目录的独立版本。包内副本和根目录独立版本保持逐文件一致，维护时同步更新，并运行发行校验检查差异。两种入口均支持通过报告交接：独立调研写入 `.artifacts/` 的报告可以作为 Harness 任务的输入，Harness 任务写入 `.harness/runs/<task>/artifacts/` 的报告也可以被后续独立设计会话读取，并按任务范围重新核验。存量调研在 intake 内按需调用；服务端设计与设计审查使用包内 `server-tech-design`，其他领域保留通用设计路径。
+
+## 维护与验证
+
+在仓库根目录运行：
+
+```bash
+python3 harness-devflow/scripts/validate_distribution.py
+(cd harness-devflow && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v)
+(cd lark-context-explore && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v)
+(cd travel-english-coach && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v)
+```
+
+发行校验检查插件清单、Skill 路由、资源、文档链接、配置示例，以及内置专业 Skills 与根目录副本的一致性。更新这两个专业 Skills 时，同步其内置副本与 `harness-devflow/references/bundled-skill-origins.json` 中的文件哈希。
+
+测试使用临时仓库和合成数据。真实服务访问、发布和教学效果需在对应使用环境中另行验证，具体范围见各组件的验证说明。
 
 ## 目录与分享
 
@@ -125,13 +170,17 @@ Harness 已在 `harness-devflow/skills/` 内包含两个专业 Skill 及全部�
 ├── codex-agent-rules/      # Codex 全局规则模板与安装说明
 ├── harness-devflow/        # 完整插件：宿主清单、Skills、运行时、文档和测试
 ├── brownfield-recon/       # 独立调研 Skill 及配套资源
-└── server-tech-design/     # 独立设计 Skill 及配套资源
+├── lark-context-explore/   # 飞书事项背景收集、证据记录和离线校验
+├── server-tech-design/     # 独立设计 Skill 及配套资源
+└── travel-english-coach/   # 旅行英语教练、独立进度档案工具和回归测试
 ```
 
 克隆本仓库后，按需使用对应目录：
 
 - 完整开发流程：使用 `harness-devflow/`，按 [插件接入说明](harness-devflow/README.md#获取与使用) 加载或安装。
 - 独立调研或设计：将 `brownfield-recon/` 或 `server-tech-design/` 完整目录放入所用宿主的 Skills 目录，也可在任务中指定其 `SKILL.md` 路径使用。
+- 飞书事项背景收集：将 `lark-context-explore/` 完整目录放入 Skills 目录，并准备已授权的 `lark-cli` 环境。
+- 旅行英语练习：将 `travel-english-coach/` 完整目录放入 Skills 目录；首次使用核对 `settings.json`，更新已有安装时保留其固定档案位置。
 - 全局执行规则：参考 [codex-agent-rules](codex-agent-rules/README.md) 将模板安装或合并到个人 Codex 主目录。
 
 分享时可以提供本仓库链接或复制所需的完整目录。复制插件时保留 `.codex-plugin/`、`.claude-plugin/` 等隐藏目录；复制 Skill 时保留配套的 `references/`、`scripts/` 等资源。

@@ -8,8 +8,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Harness Devflow",
-    "shortDescription": "从需求到交付的通用 AI 研发工作流",
-    "longDescription": "面向不同 AI 编码宿主的完整研发流程，支持引导检查点与自主执行；宿主适配和内置执行共用验证门禁，内置存量调研、服务端设计与可恢复任务状态。",
+    "shortDescription": "\u4ece\u9700\u6c42\u5230\u4ea4\u4ed8\u7684\u901a\u7528 AI \u7814\u53d1\u5de5\u4f5c\u6d41",
+    "longDescription": "\u9762\u5411\u4e0d\u540c AI \u7f16\u7801\u5bbf\u4e3b\u7684\u5b8c\u6574\u7814\u53d1\u6d41\u7a0b\uff0c\u652f\u6301\u5f15\u5bfc\u68c0\u67e5\u70b9\u4e0e\u81ea\u4e3b\u6267\u884c\uff1b\u5bbf\u4e3b\u9002\u914d\u548c\u5185\u7f6e\u6267\u884c\u5171\u7528\u9a8c\u8bc1\u95e8\u7981\uff0c\u5185\u7f6e\u5b58\u91cf\u8c03\u7814\u3001\u670d\u52a1\u7aef\u8bbe\u8ba1\u4e0e\u53ef\u6062\u590d\u4efb\u52a1\u72b6\u6001\u3002",
     "developerName": "Harness Devflow contributors",
     "category": "Productivity",
     "capabilities": [
@@ -17,9 +17,9 @@
       "Write"
     ],
     "defaultPrompt": [
-      "启动一个通用 Harness 研发流程",
-      "查看当前研发流程并继续",
-      "审查当前变更并运行配置的验证"
+      "\u542f\u52a8\u4e00\u4e2a\u901a\u7528 Harness \u7814\u53d1\u6d41\u7a0b",
+      "\u67e5\u770b\u5f53\u524d\u7814\u53d1\u6d41\u7a0b\u5e76\u7ee7\u7eed",
+      "\u5ba1\u67e5\u5f53\u524d\u53d8\u66f4\u5e76\u8fd0\u884c\u914d\u7f6e\u7684\u9a8c\u8bc1"
     ]
   },
   "keywords": [

@@ -22,6 +22,7 @@ checklist or a sequence of “not applicable” explanations into the document u
 - [ ] New traffic, dependencies, storage, or latency costs are assessed when material, with assumptions or evidence.
 - [ ] Numbers distinguish measurements, estimates, and targets; organizational requirements have a source and scope.
 - [ ] Existing behavior, proposed changes, implemented work, and verified results are not conflated.
+- [ ] Consequential claims point to the relevant symbol/configuration read site or document section and version; local snapshots and runtime observations keep their evidence limits.
 - [ ] Open items affect a real decision or readiness claim and identify the missing information or next step.
 
 ## Can the design be observed, verified, and released?
@@ -40,3 +41,6 @@ checklist or a sequence of “not applicable” explanations into the document u
 - [ ] Each definition or field reference has one primary home; annotated schemas and examples do not duplicate a second full reference.
 - [ ] After changes, affected examples, diagrams, cross-references, headings, and obsolete explanations have been reconciled.
 - [ ] The final affected content has been read back; user annotations and unrelated content are preserved.
+- [ ] Chinese paragraphs follow the controlled-language rules: explicit actors, one action or judgment per sentence, complete conditions and consistent terms; simplification has not changed the contract.
+- [ ] Diagram generation, syntax checking and visual inspection have separate, accurate states; unavailable checks are reported rather than treated as passed.
+- [ ] Review findings identify location, trigger, impact, evidence and correction; stylistic suggestions are not promoted to blockers, and a clean review reports its actual scope and limits.

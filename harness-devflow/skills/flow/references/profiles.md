@@ -49,7 +49,7 @@ The project-level `workflow` object and per-task CLI flags use the same options:
 | --- | --- |
 | assistance | `guided` (default) returns one task with verified checkpoints; `autonomous` allows continuous work and ordered batch submission, with identical final checks |
 | profile | `light`, `standard`, `release`; default standard |
-| target | `local`, `pr`, `merged`, `deployed`; omitted/null uses the profile default |
+| target | `local`, `pushed`, `pr`, `merged`, `deployed`; omitted/null uses the profile default |
 | domain | `generic` (default), `backend`, `frontend`, `mixed`; backend selects bundled server design/audit methods |
 | capabilities | Logical providers for `recon`, `design`, `design_audit`, `review`: `auto`, `builtin`, a bundled name or a project skill name; never an absolute path |
 | isolation | `auto`: checkout for one module, worktrees for multiple; `checkout`: one module only; `worktree`: always isolated |
@@ -58,8 +58,9 @@ The project-level `workflow` object and per-task CLI flags use the same options:
 | stages | Boolean overrides for `design`, `design_audit`, `test_design`, `design_approval`, `interfaces`, `integration`, `knowledge` |
 
 Interfaces and knowledge default off. Integration defaults on when the project assigns
-nonempty `stage_checks.integration`. Design audit/approval require design. The four core
-stages and the endpoint's delivery stages cannot be disabled. A configured adapter alone
+nonempty `stage_checks.integration`. Design audit/approval require design. Development entry requires the four core stages. Explicit `start-review` entry excludes pre-review
+development stages without marking them as executed. Review and selected delivery stages cannot
+be disabled. `pushed` selects push without PR/monitor/release/deploy. A configured adapter alone
 does not select an external stage. There is no arbitrary stage reordering; integration's
 two supported positions retain the verified-code dependencies.
 
@@ -97,3 +98,5 @@ Configure the separate project `host` object using [the host contract](../../../
 Native and builtin providers share quality rules. A host name never implies tool availability or
 model capability. Missing native support selects builtin execution before the operation begins.
 Permission denial, failed tests or uncertain effects never trigger automatic executor fallback.
+
+`start-review --goal ... --base ... --acceptance ... --target pushed` selects an existing-change review entry with the light profile. Its entry cannot be changed after creation. See [focused tasks](../../../references/focused-tasks.md).

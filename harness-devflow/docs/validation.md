@@ -1,16 +1,21 @@
-# 验证记录
+# 验证与测试
 
-验证日期：2026-09-10。版本：1.0.0。
+运行测试需要 Python 3.10+ 与 Git。在 `harness-devflow/` 目录执行：
 
-## 自动验证结果
+```bash
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v
+python3 scripts/validate_distribution.py
+```
 
-- **102 项行为测试通过**，耗时 157.092 秒。完整输出见 [test-results.txt](test-results.txt)。
-- Codex Plugin Creator 的插件清单校验通过。
-- **16 个 Skills** 全部通过 Skill Creator 的 frontmatter、名称与占位内容校验。
-- 本机 Claude Code **2.1.152** 的 `plugin validate` 校验通过。
-- 发行目录中的路由、资源、Markdown 文件链接和配置示例校验通过。
-- Python 运行时源码通过 Python 3.10 语法解析检查；行为测试实际运行在 macOS / Python 3.14。
-- 将完整插件复制到新的临时目录后，标准服务端流程通过公开 CLI 完成，独立测试耗时 6.392 秒。该流程实际使用复制目录内的调研采集器与服务端设计资源。
+测试使用临时仓库、合成任务与本地裸仓库，不向真实远端服务推送。发行校验检查插件清单、Skill 路由、资源、Markdown 链接和配置示例；存在相邻独立 Skill 目录时，同时检查内置副本是否一致。
+
+使用 Claude Code 的维护者可额外运行宿主清单校验：
+
+```bash
+claude plugin validate /absolute/path/harness-devflow
+```
+
+将占位路径替换为实际插件目录。测试数量和耗时以当前代码的运行输出为准。
 
 ## 行为覆盖
 
@@ -28,21 +33,12 @@
 | 专业交接 | 公开 CLI 执行采集、记录调研、向设计传递实际 baseline 路径、设计审查、引导实现及最终单测 |
 | 恢复 | 原子写入、并发锁、失败预算、工作树创建恢复、部分合并冲突恢复、跨宿主任务包重新校验 |
 | 当前契约 | 历史配置和任务格式拒绝读取且不改写；已移除的 CLI 命令没有别名入口 |
+| 推送目标 | 拉取与推送地址分离、多个推送地址及 URL 重写；任一推送目标的分支与已审查提交不一致时拒绝通过 |
 
 ## 验证边界
 
 原生命令由显式测试桥接器执行，宿主工作树由测试创建真实 Git worktree 后接入。它们验证接口契约与核心行为，不能代替每个宿主实际工具/API、权限和账号环境的端到端验收。
 
-Codex 与 Claude Code 的清单校验验证插件结构；没有用付费模型跑跨厂商编码效果对比，也没有执行真实生产部署、安装后台调度器或修改全局插件配置。测试中的方案与审查文档是明确的 fixture；语义质量和不同模型的效果需要真实任务评估。
+Codex 与 Claude Code 的清单校验验证插件结构。测试中的方案与审查文档是合成材料；语义质量、不同模型的效果、真实部署及后台调度接入需要在目标环境中评估。
 
-本次测试没有覆盖 Windows 环境、跨机器任务数据传输或组织级身份认证。运行时要求可用的文件读写、Python 命令执行和 Git；缺少这些能力时不能声明相同的程序化保证。
-
-## 复现
-
-```bash
-python3 -m unittest discover -s tests -v
-python3 scripts/validate_distribution.py
-claude plugin validate /absolute/path/harness-devflow
-```
-
-测试使用临时仓库并隔离用户 Git 全局配置，不修改消费项目或真实远端服务。
+本地测试不能代替 Windows 兼容性、跨机器任务数据传输或组织级身份认证验证。运行时要求可用的文件读写、Python 命令执行和 Git；缺少这些能力时不能声明相同的程序化保证。

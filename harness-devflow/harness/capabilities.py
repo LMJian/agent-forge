@@ -102,10 +102,10 @@ def prepare(workflow, slot: str, reason: str) -> dict:
             shutil.copyfile(path, target)
             copied.append(str(target))
         phase = "design" if state["workflow"]["enabled"]["design"] else "implementation"
-        prior = [state["stages"][s]["report"] for s in stage_order(state)[:stage_order(state).index(stage)]
-                 if state["stages"][s].get("report")]
-        inputs = list(dict.fromkeys(name for source in prior
-                                   for name in read_json(inside(workflow.root, source))["artifacts"]))
+        from .context import references
+        context = references(workflow, state)
+        prior = [item["report"] for item in context]
+        inputs = list(dict.fromkeys(name for item in context for name in item["artifacts"]))
         source_evidence = snapshots(workflow.root, copied)
         source_digest = digest([{ "path": str(Path(p).relative_to(directory / "source")), "sha256": e["sha256"]}
                                 for p, e in zip(copied, source_evidence)])
@@ -114,6 +114,7 @@ def prepare(workflow, slot: str, reason: str) -> dict:
                    "goal": state["goal"], "domain": state["workflow"]["domain"], "repository": str(workflow.root),
                    "head": vcs.head(workflow.root), "base_sha": state["base_sha"], "input_reports": prior,
                    "input_artifacts": inputs,
+                   "review_context": state.get("review_context"),
                    "readiness_phase": phase if slot == "recon" else None,
                    "output_directory": str(output), "format": "local_markdown",
                    "constraints": ["Use the requested local output directory; no implicit document publication or telemetry",

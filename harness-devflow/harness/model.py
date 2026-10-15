@@ -21,7 +21,7 @@ ASSISTANCE = ("guided", "autonomous")
 CONFIG_SCHEMA = 2
 STATE_SCHEMA = 3
 REPORT_SCHEMA = 2
-TARGETS = ("local", "pr", "merged", "deployed")
+TARGETS = ("local", "pushed", "pr", "merged", "deployed")
 SELECTABLE = {"design", "design_audit", "test_design", "design_approval", "interfaces", "integration", "knowledge"}
 CAPABILITY_STAGES = {"recon": "intake", "design": "design", "design_audit": "design_audit", "review": "review"}
 BUNDLED_CAPABILITIES = {"brownfield-recon", "server-tech-design"}
@@ -90,7 +90,7 @@ def default_config() -> dict:
 
 
 def workflow_defaults() -> dict:
-    return {"profile": "standard", "target": None, "isolation": "auto", "assistance": "guided",
+    return {"profile": "standard", "target": None, "isolation": "auto", "assistance": "guided", "entry": "develop",
             "integration_position": "before_push", "knowledge_approval": False, "stages": {},
             "domain": "generic", "capabilities": {slot: "auto" for slot in CAPABILITY_STAGES}}
 
@@ -101,6 +101,7 @@ def workflow_options(value: Any) -> dict:
     options = {**workflow_defaults(), **value}
     require(options["profile"] in PROFILES, "Unknown workflow profile")
     require(options["assistance"] in ASSISTANCE, "Unknown assistance mode")
+    require(options["entry"] in {"develop", "review"}, "Unknown workflow entry")
     require(options["target"] is None or options["target"] in TARGETS, "Unknown delivery target")
     require(isinstance(options["isolation"], str) and options["isolation"] in {"auto", "checkout", "worktree"}, "Unknown isolation mode")
     require(isinstance(options["integration_position"], str) and options["integration_position"] in {"before_push", "after_push"}, "Unknown integration position")
@@ -130,9 +131,15 @@ def resolve_workflow(config: dict, overrides: dict | None = None) -> dict:
                    test_design=profile != "light", design_approval=profile == "release",
                    integration=bool(config["stage_checks"].get("integration")))
     enabled.update(options["stages"])
-    enabled.update(push=target != "local", pr=target != "local",
+    enabled.update(push=target != "local", pr=target in {"pr", "merged", "deployed"},
                    monitor=target in {"merged", "deployed"}, release=target == "deployed",
                    deploy=target == "deployed")
+    if options["entry"] == "review":
+        require(profile == "light", "Existing-change review requires the light profile")
+        before_review = STAGES[:STAGES.index("review")]
+        require(not any(options["stages"].get(s) for s in before_review),
+                "Existing-change review cannot select development stages")
+        enabled.update(dict.fromkeys(before_review, False))
     require(not (enabled["design_audit"] or enabled["design_approval"]) or enabled["design"],
             "Design audit and approval require the design stage")
     require(not enabled["integration"] or options["integration_position"] != "after_push" or target != "local",
@@ -146,7 +153,7 @@ def resolve_workflow(config: dict, overrides: dict | None = None) -> dict:
 
 def validate_command(spec: Any, label: str, *, adapter: bool = False) -> None:
     require(isinstance(spec, dict), f"{label} must be an object")
-    require(set(spec) <= ({"argv", "timeout_seconds", "effect"} if adapter else {"argv", "timeout_seconds"}),
+    require(set(spec) <= ({"argv", "timeout_seconds", "effect"} if adapter else {"argv", "timeout_seconds", "reuse"}),
             f"Unknown command option in {label}")
     argv = spec.get("argv")
     require(isinstance(argv, list) and bool(argv), f"{label}.argv must be a nonempty array")
@@ -155,6 +162,14 @@ def validate_command(spec: Any, label: str, *, adapter: bool = False) -> None:
     nonempty(argv[0], f"{label}.argv[0]")
     timeout = spec.get("timeout_seconds", 300)
     require(type(timeout) is int and 1 <= timeout <= 86400, f"Invalid timeout in {label}")
+    if "reuse" in spec:
+        reuse = spec["reuse"]
+        require(isinstance(reuse, dict) and set(reuse) == {"context_files", "max_age_seconds", "assumptions"},
+                f"{label}.reuse requires context_files, max_age_seconds and assumptions")
+        strings(reuse["context_files"], f"{label}.reuse.context_files", empty=True)
+        nonempty(reuse["assumptions"], f"{label}.reuse.assumptions (why inputs are deterministic)")
+        require(type(reuse["max_age_seconds"]) is int and 1 <= reuse["max_age_seconds"] <= 86400,
+                f"Invalid reuse age in {label}")
     if adapter:
         require(spec.get("effect") in {"read", "local", "external"},
                 f"{label}.effect must be read, local or external")

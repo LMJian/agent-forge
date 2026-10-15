@@ -1,21 +1,25 @@
 {
   "source": "Byte-identical copies of the standalone skills at the repository root (../brownfield-recon, ../server-tech-design); scripts/validate_distribution.py fails on drift",
-  "synced_at": "2026-09-20",
+  "synced_at": "2026-10-16",
   "original_files": {
     "brownfield-recon": {
-      "SKILL.md": "4de8f3a4911d4fe4a88ba03fae2b33321a0461c1340bf0f9a760bec67e631cb7",
+      "SKILL.md": "f15352dafee38fd554206b01d39dbb2d44317c5999aa1bda72b4a58f80d41c4f",
       "agents/openai.yaml": "a838f069705573ef064d3df83811b785d005e950a904272c80d1f011e626fecb",
-      "references/report-contract.md": "573761fe0103f6d9ed99b18b7e78ae452abb1b427d41c6af74424dc884344d7c",
-      "references/search-playbook.md": "7a1c3f266794f111dfd63ea3593fabb56afe2f5f01e8cbf2bb989e5c323194dc",
+      "references/report-contract.md": "78035603f9dc3c19e29812cfb84b9a433f573f316487b11e399ab2a6604d9e3d",
+      "references/search-playbook.md": "80dc91e38467d002eba8480f2c732bb95a15bde73532fbb70cde5b3eb825ad82",
       "scripts/collect_evidence.py": "170a5e89bd95ba0e0b2f11728b005b40d60b4f0889a17399eba571355ba9f1c8"
     },
     "server-tech-design": {
-      "SKILL.md": "92b14abb249248690604d941118e90ecd89f81fd5c295f1a75e31749e96e5fbb",
-      "references/recon-inputs.md": "e702d5114ed8fb3791a3ceda48fd7ca0113796d4982f224a24d1e3f3735bb29f",
-      "references/review-checklist.md": "7f11e6cba29c6ba49eadf08116225e52bac8249b7c00b1efff2ceba407452b7b",
+      "SKILL.md": "edd83f33cb71e8f4db4538981cf703dad33bb8ec9e2f6c8cb061fd0c194117b3",
+      "evals/cases.json": "4108ee770abfbd6ed5e07845ae2546f124ca69ad77340a259a47885447588a31",
+      "references/diagram-checks.md": "855344dac597dafde5fa9032394a749233697b54e81dd88bc6294674adcc6687",
+      "references/evaluation.md": "f78efa16f1b02959ba63a0db1362b335cd6db1c5b07e1e18f42cd9b5b2578511",
+      "references/recon-inputs.md": "502f09c6550ee3406eb0f7bf4785a1a6b28ca87090e972f85f5f00bb8c22aeca",
+      "references/review-checklist.md": "b63b1da03c939101c7d9e385770ef80a4a51c94b8652be7ec2475e917eb1d7ff",
+      "references/review-output.md": "7329a0db85fa24fa3b7228e34ee5b9494951cd9f63a09b7672ecc5d9bc4e1cfc",
       "references/section-guide.md": "150a3fc34c4f8bcd852c12e441bd6c9a510a547a2535ccfc144c7bdff3cb3455",
       "references/template.md": "e4a9e161184fb42a0e16faa21d617e49e69a3b4081bd7689e824d7de1acc215b",
-      "references/writing-style.md": "b88c0c2e75c1600d5876f798aa471c7240cb73dba8abde7fc8ed5aaf6b4e6778"
+      "references/writing-style.md": "c303db73b486f1d0d8c78686dd035633e507b5443852c0129c75744866b5040f"
     }
   }
 }

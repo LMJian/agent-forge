@@ -19,20 +19,19 @@ def command(workflow, *args) -> list[str]:
 
 def packet(workflow, state: dict) -> dict:
     from .cli import skill_for
+    from .context import references
     stage = current(state)
     summary = workflow.summary(state)
-    inputs = []
-    for name in stage_order(state):
-        item = state["stages"][name]
-        if item.get("report"):
-            report = workflow.report_for(state, name)
-            inputs.append({"stage": name, "report": item["report"], "artifacts": report["artifacts"]})
+    inputs = references(workflow, state)
     result = {"task": workflow.task, "goal": state["goal"], "repository": str(workflow.root),
               "head": vcs.head(workflow.root), "fingerprint": vcs.fingerprint(workflow.root),
               "initial_dirty": state["initial_dirty"], "assistance": state["workflow"]["assistance"],
               "execution": resolve(state["config"]["host"], state["workflow"]["assistance"]),
               "status": summary["status"], "stage": stage, "inputs": inputs,
               "quality": "Only current code-bound check receipts and accepted artifacts satisfy completion"}
+    result["history_command"] = command(workflow, "context", "--all")
+    if state.get("review_context"):
+        result["review_context"] = state["review_context"]
     if not stage or state["aborted"]:
         result["action"] = {"kind": "finished"}
         return result
@@ -70,6 +69,7 @@ def packet(workflow, state: dict) -> dict:
         done = {c["task"] for c in module.get("checkpoints", [])}
         remaining = [t for t in tasks if t["id"] not in done]
         result["module"] = mid
+        result["inputs"] = references(workflow, state, module=mid)
         result["worktree"] = module.get("worktree")
         result["acceptance"] = module["acceptance"]
         result["tasks"] = remaining[:1] if result["assistance"] == "guided" else remaining
@@ -118,7 +118,10 @@ def submit(workflow, source: str) -> dict:
                     r["epoch"] == state["stages"][stage]["epoch"] and r["status"] == "passed" and
                     r["fingerprint"] == code and r["config_hash"] == state["execution_hash"] and r.get("module") is None]
         if stage in {"review", "integration"} and "checks" not in report:
-            report["checks"] = [r["id"] for r in eligible if r["kind"] == "check"]
+            # Older passing receipts can have expired reuse inputs. Keep only the
+            # newest candidate for each command; core validation still rejects failures.
+            latest_checks = {r["name"]: r["id"] for r in eligible if r["kind"] == "check"}
+            report["checks"] = list(latest_checks.values())
         adapters = [r for r in eligible if r["kind"] == "adapter"]
         if adapters and "adapter_run" not in report:
             report["adapter_run"] = adapters[-1]["id"]

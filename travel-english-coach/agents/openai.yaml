@@ -1,0 +1,4 @@
+interface:
+  display_name: "旅行英语口语教练"
+  short_description: "通过旅行场景练习英语口语，自动保存学习进度与复习清单"
+  default_prompt: "使用 $travel-english-coach 读取我的学习进度，开始今天的旅行英语练习。"

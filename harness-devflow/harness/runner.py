@@ -91,6 +91,8 @@ def run(workflow: Workflow, kind: str, name: str, *, authorization: str | None =
         execution = resolve(state["config"]["host"], state["workflow"]["assistance"])
         run_id = uuid.uuid4().hex
         code = vcs.fingerprint(cwd)
+        from .reuse import inputs as reuse_inputs
+        reusable = reuse_inputs(workflow, state, spec, cwd) if kind == "check" else None
         token = digest({"task": workflow.task, "stage": stage, "epoch": epoch,
                         "name": name, "module": module, "code": code, "config": state["execution_hash"],
                         "capability": capability_use["source_digest"] if capability_use else None,
@@ -106,6 +108,8 @@ def run(workflow: Workflow, kind: str, name: str, *, authorization: str | None =
                    "stdout": str(directory / "stdout.log"), "stderr": str(directory / "stderr.log")}
         if capability_use:
             receipt["capability_id"] = capability_use["id"]
+        if reusable:
+            receipt["reuse_inputs"] = reusable
         state["runs"].append(receipt)
         request = {"schema_version": 1, "task": workflow.task, "goal": state["goal"],
                    "stage": stage, "repository": str(workflow.root), "branch": state["branch"],
@@ -176,6 +180,12 @@ def run(workflow: Workflow, kind: str, name: str, *, authorization: str | None =
         if after != code and not (kind == "adapter" and stage == "interfaces"):
             receipt.update(status="failed", error="Code changed during command execution; commit and rerun")
         receipt["fingerprint"] = after
+        if reusable:
+            try:
+                require(reusable == reuse_inputs(workflow, latest, spec, cwd),
+                        "Reusable check context changed during execution")
+            except (OSError, HarnessError) as error:
+                receipt.update(status="failed", error=str(error))
         if latest["config_hash"] != digest(workflow.config):
             receipt.update(status="failed", error="Configuration changed during command execution")
         if result["outcome"] == "unknown" and (kind == "adapter" or execution["command"] == "native"):

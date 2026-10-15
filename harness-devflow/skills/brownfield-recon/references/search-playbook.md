@@ -25,9 +25,19 @@ For an unchanged dependency, establish what the changed module requires from it.
 
 Use `git show <commit>:<path>` for a pre-change implementation; `git log -S` or `-G` and a targeted `blame` can explain a specific compatibility rule or surprising branch. Read surrounding code and tests, not just commit messages.
 
+For a historical end-to-end capability claim, verify its entrypoint, registration/initialization, implementation and result path in the same commit snapshot. An implementation in one revision and a handler added after its removal do not establish a working chain. For cross-repository paths, use the dependency revisions pinned by that snapshot, not independently chosen branches. Distinguish source presence, reachable wiring, executed validation and deployment evidence; tests or fixtures alone do not prove runtime registration. If wiring is incomplete, report the supported fragment rather than searching indefinitely for a complete implementation.
+
+Choose snapshots around the relevant addition, wiring change or removal. Expand the timeline only to resolve a concrete ambiguity. Identify commits directly; a current branch containing a commit does not prove which branch originally introduced it, and rewritten history can preserve equivalent code without preserving ancestry.
+
 `git diff <base>...HEAD` describes committed branch changes. `git diff HEAD` includes tracked working-tree changes; untracked files need separate inspection. An empty branch diff does not prove that the workspace is unchanged.
 
 Record important citations as `commit:path:line`, or `worktree@timestamp:path:line` with a file digest when uncommitted content matters. Capture this before editing. Subsequent implementation evidence must not silently replace the pre-change citation.
+
+### Unavailable historical evidence
+
+Before repeated reads of an uncertain revision, establish whether the local Git object exists, for example with `git cat-file -e '<revision>^{commit}'`. Distinguish a missing object, a missing path at an existing revision, a scoped search with no matches, and an authentication/network/permission failure. Record the checked source/version and outcome in existing notes or the report; do not repeat the same lookup without a changed ref/cache, new access or new evidence.
+
+Use another relevant available source, such as a pinned dependency cache, historical callers, tests or documentation, to support only the claims it establishes. Do not present reconstructed semantics as verified original schema. If the missing evidence is essential to the requested action, state the gap and obtain the necessary source/access within the task's permissions; otherwise continue with an explicit limit. An unavailable source is not proof that the capability never existed.
 
 ## Remote contracts and uncertainty
 

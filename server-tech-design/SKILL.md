@@ -31,6 +31,9 @@ Standalone design work does not require starting Harness.
   results. Do not turn an illustrative number, example configuration, or planned test into a confirmed fact.
 - **Respect the requested operation.** A review or explanation does not automatically call for editing a
   document, changing code, publishing configuration, or starting a larger development workflow.
+- **Write Chinese prose with controlled language.** Apply the ASD-STE100 core-principle requirement in
+  [writing-style.md](references/writing-style.md#chinese-controlled-language) to drafts, revisions,
+  review findings and diagram labels. Check each affected paragraph before delivery; preserve technical meaning.
 
 ## Workflow
 
@@ -91,6 +94,9 @@ Cite the baseline entry path, relevant source version and any newly verified dif
 decisions they support or in a short source note. Preserve the original recon files; place the design
 in a separate document at the requested destination. Keep inherited assumptions and pending checks
 visible without copying the full recon report or treating its readiness as design approval.
+For consequential claims, use the compact evidence anchors in
+[recon inputs](references/recon-inputs.md#claim-level-anchors): identify the exact code symbol/configuration
+or document section and distinguish inherited evidence, current checks and proposed behavior.
 
 ### 4. Revise by replacing and consolidating
 
@@ -113,8 +119,15 @@ directory; for a new document with no specified destination, use the project's d
 directory. For an existing document, preserve its location and relevant user annotations. External
 publication is a separate action through the user's selected tool and destination. Use the
 appropriate tools for the selected destination and their supported document and diagram formats.
-Verify the rendered diagrams when applicable and the final affected content. In review mode, return
-actionable findings and corrections instead of rewriting or publishing the document by default.
+Check diagrams using [diagram-checks.md](references/diagram-checks.md): report source generation,
+syntax checking and visual inspection separately. An unavailable renderer leaves an explicit verification
+gap; it does not authorize installation, GUI use or external publication. Read back final affected content.
+In review mode, follow [review-output.md](references/review-output.md) for evidence-backed findings,
+severity and scope. Return findings instead of rewriting or publishing the document by default.
 
 Report what changed and any material unresolved issue. Keep the internal checklist and discarded outline
 out of the deliverable unless the user requests them.
+
+When maintaining this Skill, use the behavioral cases in [evaluation.md](references/evaluation.md).
+Routine design tasks do not need to load those cases. Format checks and Harness routing tests do not
+establish the quality of a generated design or review.

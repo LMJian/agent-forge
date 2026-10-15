@@ -1,0 +1,6 @@
+interface:
+  display_name: "飞书事项上下文收集"
+  short_description: "从文档、群聊与会议追溯项目背景，生成带出处的交接包与网页"
+  default_prompt: "用 $lark-context-explore 收集指定项目的完整上下文，梳理时间线、关键决策和待办，生成带出处的交接背景包。"
+policy:
+  allow_implicit_invocation: true

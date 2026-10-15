@@ -24,4 +24,4 @@
 - [brownfield-recon](../skills/brownfield-recon/SKILL.md)：提供现有行为、接口契约与变更前基线，供需求分析、设计和测试复用。
 - [server-tech-design](../skills/server-tech-design/SKILL.md)：根据需求和调研证据编写或审查服务端方案，向调用阶段返回文档与发现。
 
-专业调用的请求、资源快照、输出目录和报告转换见[能力契约](../references/capabilities.md)。运行时校验报告结构、覆盖关系、实际命令和证据新鲜度；文档质量、调研结论与审查深度由 Agent 和项目验证共同保障。验证范围见[验证记录](validation.md)。
+专业调用的请求、资源快照、输出目录和报告转换见[能力契约](../references/capabilities.md)。运行时校验报告结构、覆盖关系、实际命令和证据新鲜度；文档质量、调研结论与审查深度由 Agent 和项目验证共同保障。验证范围见[验证说明](validation.md)。
