@@ -1,4 +1,4 @@
-# Skills
+# Agent Forge
 
 面向 AI 辅助研发与个人学习的 Skills 与插件集合，覆盖飞书事项背景收集、存量代码调研、服务端技术方案、旅行英语练习，以及从需求到实现、验证和交付的完整开发流程。可以单独使用专业 Skill，也可以通过 `harness-devflow` 组织连续研发任务，保存上下文、产物与真实检查记录。
 
@@ -16,7 +16,7 @@
 ## 开始使用
 
 ```bash
-git clone https://github.com/LMJian/skills.git
+git clone https://github.com/LMJian/agent-forge.git
 ```
 
 根据任务选择一个入口：
@@ -27,7 +27,7 @@ git clone https://github.com/LMJian/skills.git
 - **练习旅行英语**：加载 `travel-english-coach/`，核对固定档案位置后，读取已有进度或开始首个旅行场景。
 - **设置个人执行规则**：将 `codex-agent-rules/AGENTS.md` 安装或合并到 `~/.codex/AGENTS.md`，让新会话默认遵循 Computer Use 授权与低消耗执行约定。
 
-在 Codex 安装插件后，可用 `$harness-devflow:flow` 启动；Claude Code 可通过 `claude --plugin-dir /absolute/path/skills/harness-devflow` 加载，再调用 `/harness-devflow:flow`。具体接入、项目初始化和命令配置见 [插件使用说明](harness-devflow/README.md#获取与使用)。
+在 Codex 安装插件后，可用 `$harness-devflow:flow` 启动；Claude Code 可通过 `claude --plugin-dir /absolute/path/agent-forge/harness-devflow` 加载，再调用 `/harness-devflow:flow`。具体接入、项目初始化和命令配置见 [插件使用说明](harness-devflow/README.md#获取与使用)。
 
 首次使用完整流程时，需要在目标仓库的 `.harness/project.json` 中配置该项目实际使用的检查命令；代码托管、接口生成和部署工具按交付需要接入。独立 Skills 按各自说明使用，不需要初始化 Harness 项目。
 
