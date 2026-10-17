@@ -13,17 +13,14 @@ from harness.model import STAGES, BUNDLED_CAPABILITIES, validate_config
 
 def validate(root=ROOT):
     errors = []
-    manifests = [json.loads((root / host / "plugin.json").read_text())
-                 for host in (".codex-plugin", ".claude-plugin")]
-    name, version = manifests[0]["name"], manifests[0]["version"]
+    manifest = json.loads((root / ".codex-plugin/plugin.json").read_text())
+    name, version = manifest["name"], manifest["version"]
     cache_layout = root.name == version and root.parent.name == name
     if root.name != name and not cache_layout:
         errors.append("Expected plugin source directory or Codex name/version cache layout")
-    if any(m["name"] != name or m["version"].split("+")[0] != version.split("+")[0] for m in manifests):
-        errors.append("Host manifests must agree on plugin name/base version")
-    if not re.fullmatch(r"\d+\.\d+\.\d+(?:\+codex\.[A-Za-z0-9.-]+)?", manifests[0]["version"]):
+    if not re.fullmatch(r"\d+\.\d+\.\d+(?:\+codex\.[A-Za-z0-9.-]+)?", version):
         errors.append("Expected release semver with optional Codex cachebuster")
-    if "hooks" in manifests[0]:
+    if "hooks" in manifest:
         errors.append("Unsupported Codex manifest hooks field")
     expected = {skill_for(stage) for stage in STAGES} | {"flow"} | BUNDLED_CAPABILITIES
     actual = {p.parent.name for p in (root / "skills").glob("*/SKILL.md")}

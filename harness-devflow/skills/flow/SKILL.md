@@ -15,16 +15,15 @@ a second workflow over an active task just because a similarly named skill is av
 
 1. Read applicable project instructions. Establish the actual goal, acceptance scope, repository
    and task ID. Keep the selected model and host permissions.
-2. Choose `light` for a focused change, `standard` for substantial design, and `release` for
-   formal design approval plus deployment. Choose the requested endpoint independently;
-   default to `local`. Preserve explicit project/user requirements.
-3. Use `guided` assistance by default. Use `autonomous` when the user or project selects it.
-   This changes task granularity, not quality gates. Model or vendor names do not determine
-   the mode. See [profiles](references/profiles.md).
-4. Inspect available host tools. Use builtin execution unless actual native capability or an
-   explicitly configured command bridge is available. Follow [host integration](../../references/hosts.md)
-   for native worktrees, command bridges, delegation and scheduling. Capability availability
-   is separate from authorization. Missing native support has a builtin or serial path.
+2. Default new projects to `profile=codex`, `assistance=autonomous`, `target=local`.
+   Follow [the Codex contract](../../references/codex-workflow.md): one decision packet, continuous
+   implementation, product verification. Read it before intake. Existing task choices and explicit
+   user requirements persist; `standard`/`release` remain for separately requested design stages.
+3. Run the smallest representative feasibility probe before committing to a risky architecture.
+   Do not defer proof of the primary product outcome until human acceptance. Prefer one module.
+4. This plugin targets Codex. Prefer builtin CLI/API execution and authorized Codex tools. Do not
+   inspect generic host adapters or model vendors unless an existing project actually uses them.
+   GUI, delegation, external delivery and scheduling still require their applicable authorization.
 5. If needed, run `init` and configure real project checks and selected delivery adapters.
    Inspect project scripts rather than inventing a passing check. Run `doctor` with the intended
    profile and endpoint. A Git repository with an initial commit is required. Detached HEAD
@@ -38,7 +37,8 @@ a second workflow over an active task just because a similarly named skill is av
    Read only needed `inputs`; after reading, optionally `ack-context <content_id>` so unchanged
    material is identifiable on the next packet. Use `context --all` only for missing historical context.
 7. Execute the returned action and submit the actual result. Repeat `next` while authorized
-   work remains. Finish at the selected endpoint. An internal routing message is not delivery.
+   work remains. Finish at the selected endpoint. An internal routing message is not delivery. In Codex mode, `next` computes the plan from
+   the accepted intake packet and stops at any selected approval; do not author a duplicate plan.
 
 ## Action handling
 
@@ -46,7 +46,8 @@ a second workflow over an active task just because a similarly named skill is av
   `submit --result <body.json>`. The runtime creates the envelope and links actual check receipts.
 - `prepare_module`: run its command. Builtin execution returns the checkout; native execution
   may return a worktree request. Follow that request and `attach-worktree` after creation.
-- `implement_task`: in guided mode complete only the next planned task, run a real check and
+- `implement_task`: default autonomous execution completes related tasks together. If explicitly
+  guided, complete the next planned task, run a real check and
   record `checkpoint`. In autonomous mode complete related tasks together, then verify the module.
 - `submit_module` / `merge_wave`: follow [implementation](../implement/SKILL.md).
 - `inspect_execution`: inspect process state, logs and external effects. Reconcile an uncertain
@@ -61,6 +62,13 @@ a second workflow over an active task just because a similarly named skill is av
 The returned Skill may be loaded by the host or read as Markdown directly. The plugin bundles
 `brownfield-recon` and `server-tech-design`; resolve those through package-relative paths and
 [professional handoff](../../references/capabilities.md). Do not require personal skill paths.
+
+## Verification efficiency
+
+Use `verify` for the selected check batch. Use `test-progress` before asking for any human
+operation or reporting completion. Keep automation, authorized agent actions and unavoidable human
+work distinct. Report remaining cases and human batches, not just how many unit tests passed.
+See the [Codex contract](../../references/codex-workflow.md) for evidence reuse and failure recovery.
 
 ## Approval and recovery
 

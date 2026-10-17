@@ -32,9 +32,6 @@ class DistributionTests(unittest.TestCase):
         self.root.rename(wrong)
         self.assertTrue(any("cache layout" in e for e in validator.validate(wrong)))
 
-    def test_mismatched_host_base_versions_are_rejected(self):
-        path = self.root / ".claude-plugin/plugin.json"
-        data = json.loads(path.read_text())
-        data["version"] = "2.0.0"
-        path.write_text(json.dumps(data))
-        self.assertTrue(any("base version" in e for e in validator.validate(self.root)))
+    def test_codex_package_needs_no_other_host_manifest(self):
+        self.assertFalse((self.root / ".claude-plugin/plugin.json").exists())
+        self.assertEqual(validator.validate(self.root), [])

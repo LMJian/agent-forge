@@ -11,7 +11,7 @@ CAPABILITIES = {"worktree", "delegation", "scheduling"}
 
 
 def defaults() -> dict:
-    return {"name": "generic", "available": [], "command": {"provider": "auto"},
+    return {"name": "codex", "available": [], "command": {"provider": "auto"},
             "worktree": "auto"}
 
 

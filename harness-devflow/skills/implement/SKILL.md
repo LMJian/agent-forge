@@ -50,3 +50,12 @@ Use focused tests for each task and the full selected module checks at completio
 plan materially changes, reopen plan. Preserve historical checkpoint artifacts and command logs.
 When every module has integrated, submit an overall implementation result. Worktree cleanup is
 separate; the plugin does not delete host worktrees or unmerged changes.
+
+## Codex verification contract
+
+Follow [the Codex contract](../../references/codex-workflow.md). Prefer command/API/replay checks;
+use authorized GUI actions when appropriate. Reserve human cases for stated limitations and group
+them into a batch. `verify` runs selected checks and records command cases; `test-progress` reports
+remaining cases. Product-level outcome evidence is required in Codex mode, independently of passing
+unit/build checks. A user waiver remains an exclusion. Do not repeat manual work after the same
+failure: preserve inputs, diagnose and verify the changed product path before requesting another run.

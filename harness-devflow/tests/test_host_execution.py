@@ -34,7 +34,7 @@ class PortableExecutionTests(RepoCase):
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
             code = main(["--repo", str(self.root), "--task", self.flow.task, *args])
         self.assertEqual(code, expected, err.getvalue() or out.getvalue())
-        return json.loads((out if code == 0 else err).getvalue())
+        return json.loads((out if code in {0, 1} else err).getvalue())
 
     def body(self, stage, **fields):
         path = self.report(stage, **fields)
@@ -340,7 +340,7 @@ class HostSelectionTests(RepoCase):
             self.assertEqual(selected["command"], "builtin")
             self.assertEqual(selected["worktree"], "builtin")
             self.assertEqual(selected["delegation"], "serial")
-        self.assertEqual(default_config()["workflow"]["assistance"], "guided")
+        self.assertEqual(default_config()["workflow"]["assistance"], "autonomous")
 
     def test_explicit_native_requires_actual_integration(self):
         for config in ({"command": {"provider": "native"}}, {"worktree": "native"}):

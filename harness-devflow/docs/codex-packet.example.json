@@ -1,0 +1,15 @@
+{
+  "status": "pass",
+  "summary": "Small local change using known platform behavior; decision and verification packet",
+  "artifacts": [".harness/runs/example/artifacts/decision.md"],
+  "findings": [],
+  "details": {
+    "acceptance": ["AC-1"],
+    "modules": [{"id": "core", "depends_on": [], "acceptance": ["AC-1"]}],
+    "approach": "Extend the existing public entry while preserving its input/output contract",
+    "verification": "Run the configured product-smoke command through the public entry and inspect output",
+    "feasibility": {"assessment": "Known local behavior; no new algorithm, entitlement or service dependency", "risks": []},
+    "tasks": {"core": [{"id": "implement", "summary": "Implement the accepted behavior", "acceptance": ["AC-1"], "verification": "Run product-smoke with an independent expected output"}]},
+    "scenarios": [{"id": "primary-outcome", "acceptance": ["AC-1"], "level": "product", "executor": "command", "check": "product-smoke", "environment": "Local supported runtime", "procedure": "Invoke the actual public entry with representative input", "expected": "Matches the documented output including relevant errors"}]
+  }
+}

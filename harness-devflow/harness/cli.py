@@ -50,7 +50,7 @@ def selected_options(args):
 
 
 def parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(description="Provider-neutral development harness")
+    p = argparse.ArgumentParser(description="Codex development harness")
     p.add_argument("--version", action="version", version=__version__)
     p.add_argument("--repo", type=Path, default=Path.cwd(), help="Owning consumer Git checkout")
     p.add_argument("--task", help="Stable task ID (lowercase letters, numbers, hyphens)")
@@ -77,6 +77,12 @@ def parser() -> argparse.ArgumentParser:
     reuse = commands.add_parser("reuse-check", help="Explicitly reuse a deterministic local review check for identical inputs")
     reuse.add_argument("name")
     reuse.add_argument("--from", required=True, dest="source_id")
+    verify = commands.add_parser("verify", help="Run the selected checks once; reuse only explicit deterministic evidence")
+    verify.add_argument("--module")
+    verify.add_argument("--fresh", action="store_true", help="Execute all commands without evidence reuse")
+    commands.add_parser("test-progress", help="Read remaining cases, human batches and exclusions")
+    case = commands.add_parser("record-case", help="Record actual acceptance evidence or an explicit user waiver")
+    case.add_argument("--result", required=True)
     group = commands.add_parser("link-repositories", help="Pin independent repository tasks without modifying them")
     group.add_argument("--manifest", required=True)
     group_status = commands.add_parser("repositories-status")
@@ -241,6 +247,15 @@ def execute(args: argparse.Namespace) -> dict:
     if cmd == "reuse-check":
         from .reuse import reuse
         return reuse(w, args.name, args.source_id)
+    if cmd == "verify":
+        from .verification import verify
+        return verify(w, args.module, args.fresh)
+    if cmd == "test-progress":
+        from .quality import progress
+        return progress(w, w.load(active=False, config_check=False))
+    if cmd == "record-case":
+        from .quality import record
+        return record(w, args.result)
     if cmd == "configure-flow":
         return w.configure_flow(selected_options(args), args.reason)
     if cmd == "status":

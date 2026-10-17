@@ -6,7 +6,7 @@
 
 | 项目 | 形态 | 主要用途 |
 | --- | --- | --- |
-| [harness-devflow](harness-devflow/README.md) | 完整研发流程插件 | 按任务选择流程深度，支持引导或自主执行、宿主适配、检查点验证和任务恢复。 |
+| [harness-devflow](harness-devflow/README.md) | 完整研发流程插件 | Codex 三段流程、前期可行性验证、自动化验收与可恢复任务。 |
 | [brownfield-recon](brownfield-recon/SKILL.md) | 独立 Skill | 调研已有代码、接口契约和失败路径，形成修改前的行为基线与保留／替换／移除判断。 |
 | [server-tech-design](server-tech-design/SKILL.md) | 独立 Skill | 编写、评审和优化服务端技术方案，讲清主流程、关键决策与相关工程约束。 |
 | [lark-context-explore](lark-context-explore/SKILL.md) | 独立 Skill | 从飞书文档、消息、会议等来源收集事项背景，形成带出处、时间线和待确认问题的交接包。 |
@@ -27,52 +27,34 @@ git clone https://github.com/LMJian/agent-forge.git
 - **练习旅行英语**：加载 `travel-english-coach/`，核对固定档案位置后，读取已有进度或开始首个旅行场景。
 - **设置个人执行规则**：将 `codex-agent-rules/AGENTS.md` 安装或合并到 `~/.codex/AGENTS.md`，让新会话默认遵循 Computer Use 授权与低消耗执行约定。
 
-在 Codex 安装插件后，可用 `$harness-devflow:flow` 启动；Claude Code 可通过 `claude --plugin-dir /absolute/path/agent-forge/harness-devflow` 加载，再调用 `/harness-devflow:flow`。具体接入、项目初始化和命令配置见 [插件使用说明](harness-devflow/README.md#获取与使用)。
+在 Codex 安装插件后，可用 `$harness-devflow:flow` 启动。插件仅以 Codex 为支持目标；具体配置见 [插件使用说明](harness-devflow/README.md#使用)。
 
 首次使用完整流程时，需要在目标仓库的 `.harness/project.json` 中配置该项目实际使用的检查命令；代码托管、接口生成和部署工具按交付需要接入。独立 Skills 按各自说明使用，不需要初始化 Harness 项目。
 
-## harness-devflow：通用 Harness 开发流程
+## harness-devflow：Codex 精简研发流程
 
-当前版本为 **1.0.0**，支持 Codex、Claude Code 及能读取 Skills、执行命令的其他 AI 编码宿主。运行时依赖 **Python 3.10+ 与 Git**，提供通用流程核心、宿主适配与内置后备执行；具体研发工作由 Agent 按 Skills 完成，检查命令使用项目自己的工具链。
+运行时依赖 **Python 3.10+ 与 Git**，默认 `profile=codex`、`assistance=autonomous`、`target=local`。
 
-插件包含 **14 个流程 Skills 与 2 个专业 Skills**，共 16 个 Skills。运行时从阶段目录中选择本次任务需要的路线；需求、计划、实现和审查验证是核心阶段。[完整阶段与 Skills 职责](harness-devflow/README.md#16-个-skills)见插件文档。
+1. 需求与可行性：一份决策包合并需求、架构、关键风险实验、测试和任务。
+2. 连续实现：自动计算计划，Codex 持续实现及修复。
+3. 自测交付：验证产品路径和实际输出，记录自动化与必要人工操作的结果。
 
-以下配置分别选择，可以按任务组合：
+内部四个状态中，`plan` 从已接受的决策包生成；要求设计确认时仍保留具体审批。
+未证明的关键技术假设阻止正式开发；单元测试或编译成功不能冒充产品验收。
+`verify` 批量运行检查并在明确确定性前提下复用证据，`test-progress` 显示剩余用例和人工批次。
 
-| 配置 | 选择 | 作用 |
-| --- | --- | --- |
-| 流程深度 `profile` | `light` / `standard` / `release` | 决定需要哪些设计、审查和确认阶段，默认 `standard` |
-| 交付终点 `target` | `local` / `pushed` / `pr` / `merged` / `deployed` | 决定完成到本地验证、远端推送、评审请求、合并还是部署 |
-| 执行引导 `assistance` | `guided` / `autonomous` | 决定逐任务检查点或连续执行，默认 `guided` |
-| 宿主能力 `host` | 当前实际可用的工具与适配器 | 决定使用宿主能力还是内置执行，默认使用内置能力 |
-
-| 流程配置 | 默认开发流程 | 默认交付终点 |
-| --- | --- | --- |
-| `light` | 需求 → 任务计划 → 实现 → 审查与验证 | 本地完成 |
-| `standard` | 需求 → 设计 → 设计审查 → 测试设计 → 计划 → 实现 → 审查与验证 | 本地完成 |
-| `release` | 标准流程，增加设计确认，随后执行远端交付与发布部署 | 部署完成 |
-
-开发深度与交付终点独立选择：`local` 在本地验证后完成，`pushed` 在推送已审查提交并核对实际推送目标的远端分支后完成，`pr` 在创建评审请求后完成，`merged` 等待合并，`deployed` 完成发布确认和部署验证。接口更新、集成测试、知识归档按需启用；单模块默认使用当前分支，多模块可通过 worktree 按依赖批次实现与合并。
-
-`guided` 引导执行按计划逐个完成可验证的小任务，并记录真实检查点，适合需要明确步骤和更强过程约束的任务。`autonomous` 自主执行允许连续实现和有序批量提交，两种方式共用验收与交付门禁。模式由项目和用户选择，不按模型或厂商名称自动判断。
-
-宿主提供可用能力时，可显式接入命令桥接器、工作树或委派工具；缺少这些能力时，使用内置命令执行、Git worktree 和串行流程。持续观察可接入宿主调度器；没有调度器时，在当前会话检查或下次恢复任务。具体能力契约见 [宿主接入说明](harness-devflow/references/hosts.md)。
-
-支持 detached HEAD 和已有未提交修改的本地任务。阶段推进需要实际产物与检查记录，代码或已引用产物变化会使相关证据失效。插件保留阶段状态、调用来源和失败历史，支持中断恢复、重开阶段与有界重试；也可导出任务包，让其他宿主在同一工作区中接续处理。
-
-需求、设计和验证记录默认保存在本地。测试、代码评审、接口更新及部署通过项目配置的命令或适配器执行。
-
-插件加载后，在 Codex 中可这样请求：
+旧任务保留原先的 `light`/`standard`/`release`、引导执行和审批要求。
+交付终点仍包括 `local`、`pushed`、`pr`、`merged`、`deployed`；对外动作不因流程配置自动获得授权。
+不再维护其他宿主的插件入口，保留旧状态读取和已有适配器只为保护已开始的工作。
 
 ```text
-$harness-devflow:flow 实现服务端导出功能，使用标准流程和引导执行，完成到本地验证。
-$harness-devflow:flow 修复这个边界条件，使用轻量流程和自主执行，完成到本地验证。
-$harness-devflow:flow 查看当前任务状态并继续。
+$harness-devflow:flow 实现导出功能，先证明关键可行性，自动自测后交付本地版本。
+$harness-devflow:flow 查看当前任务的剩余测试与阻塞，继续推进。
 ```
 
-完整阶段、Skills、宿主接入和配置说明见 [插件 README](harness-devflow/README.md)；专业能力的输入、产物及报告转换见 [能力接入契约](harness-devflow/references/capabilities.md)。
-
-自动化测试覆盖内置执行、宿主适配契约、工作树、检查点、证据失效和任务恢复。运行方式及覆盖边界见 [验证说明](harness-devflow/docs/validation.md)。
+插件包含 14 个流程 Skills 和 2 个专业 Skills，按需读取。
+见 [插件 README](harness-devflow/README.md)、[Codex 合同](harness-devflow/references/codex-workflow.md)、
+[本次复盘](harness-devflow/docs/codex-retrospective.md)。
 
 ## brownfield-recon：存量逻辑调研
 
@@ -177,7 +159,7 @@ python3 harness-devflow/scripts/validate_distribution.py
 
 克隆本仓库后，按需使用对应目录：
 
-- 完整开发流程：使用 `harness-devflow/`，按 [插件接入说明](harness-devflow/README.md#获取与使用) 加载或安装。
+- 完整开发流程：使用 `harness-devflow/`，按 [插件接入说明](harness-devflow/README.md#使用) 加载或安装。
 - 独立调研或设计：将 `brownfield-recon/` 或 `server-tech-design/` 完整目录放入所用宿主的 Skills 目录，也可在任务中指定其 `SKILL.md` 路径使用。
 - 飞书事项背景收集：将 `lark-context-explore/` 完整目录放入 Skills 目录，并准备已授权的 `lark-cli` 环境。
 - 旅行英语练习：将 `travel-english-coach/` 完整目录放入 Skills 目录；首次使用核对 `settings.json`，更新已有安装时保留其固定档案位置。

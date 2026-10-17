@@ -7,6 +7,12 @@ description: "Align a software requirement with an existing repository and produ
 
 Read [the runtime contract](../flow/references/runtime.md). Run `next` for the selected `intake` stage.
 
+For `profile=codex`, follow [the Codex contract](../../references/codex-workflow.md).
+Produce one decision packet with architecture/interfaces, feasibility probes, test ownership and
+inline tasks. Use `run-check` during intake for critical assumptions. An unproven primary outcome
+blocks full implementation; do not call successful imports/builds proof of product feasibility.
+The same packet is used for a selected design approval and the automatically computed plan.
+
 For an unclear existing behavior/contract, or an explicit recon binding, follow the [capability handoff](../../references/capabilities.md): `use-skill recon --reason ...`. Auto selects the bundled [brownfield-recon](../brownfield-recon/SKILL.md). Read the returned request and pinned skill, investigate, then submit `record-skill recon --result ...`. A small known scope can reuse an existing baseline without a new investigation. An explicitly configured provider must run; do not silently use builtin instead.
 
 Use recon findings or focused direct reads to map the change to existing components. Preserve the pre-change baseline and retain/replace/remove decisions; do not rewrite them as the completed implementation. Recon readiness must name design or implementation as appropriate. Later integration/release gaps do not automatically block local work. Clarify only material ambiguity; retain accepted constraints and authorization. Prefer one module until a useful split is justified.

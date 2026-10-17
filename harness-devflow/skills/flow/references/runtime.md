@@ -50,7 +50,7 @@ task; autonomous mode returns the module tasks and may submit several stage resu
 is independently validated and persisted; it stops at an approval. If a later result fails, inspect
 `status`: the successful prefix remains completed. Batch submission never bypasses dependencies.
 
-`plan` takes a map from every module ID to tasks with `id`, `summary`, `acceptance` IDs and a
+For Codex, `next` computes `plan` from the accepted intake `details.tasks`. For other profiles, `plan` takes a map from every module ID to tasks with `id`, `summary`, `acceptance` IDs and a
 concrete `verification` method. It computes dependency waves and writes the plan report. It does
 not create worktrees or choose an LLM. Missing/duplicate IDs, unknown dependencies and cycles fail.
 
@@ -178,3 +178,13 @@ scheduler/worker handle is accepted only after actual creation and does not prov
 `start-review --goal ... --base ... --acceptance ... [--target pushed]` reviews existing changes without development history. `context [--all] [--module ID]` reads artifact references; `ack-context CONTENT_ID` records actual reading only.
 
 Group commands do not require `--task`: `link-repositories --manifest FILE`, `repositories-status GROUP`, `record-group-check GROUP --repository ID --run RUN_ID`. They keep each repository task independent and validate shared integration evidence; see [repository groups](../../../references/repository-groups.md).
+
+## Codex default route
+
+The `codex` profile adds a compact decision/feasibility/test/task packet, `verify`, `record-case`,
+and `test-progress`. Read [the Codex contract](../../../references/codex-workflow.md) for fields and
+semantics. `next` computes the plan from accepted intake tasks and prepares a selected design approval
+from that same packet. New projects default to autonomous execution; existing task settings persist.
+Current state schemas remain readable. Codex intake probes may run configured checks before planning.
+Deterministic checks with explicit `reuse.across_stages=true` may be reused across same-checkout
+implementation/review/integration; actual execution timestamps and all input/failure guards remain.

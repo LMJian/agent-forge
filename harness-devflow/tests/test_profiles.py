@@ -198,7 +198,7 @@ class ProfileTests(RepoCase):
 
     def test_defaults_and_invalid_profile_combinations(self):
         config = default_config()
-        standard = resolve_workflow(config)
+        standard = resolve_workflow(config, {"profile": "standard"})
         self.assertTrue(standard["enabled"]["design"])
         self.assertFalse(standard["enabled"]["design_approval"])
         release = resolve_workflow(config, {"profile": "release"})

@@ -154,6 +154,9 @@ class Workflow:
                     code = code or vcs.fingerprint(self.root)
                     require(item.get("fingerprint") == code, "Code changed after verification")
                 if stage == "review":
+                    from .quality import enabled, closure
+                    if enabled(state):
+                        closure(self, state)
                     from .reuse import validate_receipt
                     report = self.report_for(state, stage)
                     for receipt in state["runs"]:
@@ -176,7 +179,9 @@ class Workflow:
                 problems.append({"stage": "configuration", "reason": "Configuration changed; run sync-config with a reason"})
         except HarnessError as error:
             problems.append({"stage": "configuration", "reason": str(error)})
-        return {"task": self.task, "branch": state["branch"], "revision": state["revision"],
+        from .quality import enabled, progress
+        return {"test_progress": progress(self, state) if enabled(state) else None,
+                "task": self.task, "branch": state["branch"], "revision": state["revision"],
                 "workflow": state["workflow"],
                 "execution": resolve(state["config"]["host"], state["workflow"]["assistance"]),
                 "active_stages": [s for s in stage_order(state) if state["workflow"]["enabled"][s]],
@@ -307,6 +312,10 @@ class Workflow:
                 nonempty(details.get("verification"), "intake.details.verification (how acceptance will be checked)")
             require(state["workflow"]["isolation"] != "checkout" or len(details["modules"]) == 1,
                     "Checkout isolation supports one module; use auto/worktree for multiple modules")
+            from .quality import enabled, validate_intake
+            if enabled(state):
+                require("findings" in report, "Codex intake needs explicit design-review findings, including when empty")
+                validate_intake(self, state, details, artifacts)
         elif stage == "design":
             modules = self.report_for(state, "intake")["details"]["modules"]
             designs = details.get("designs")
@@ -333,23 +342,8 @@ class Workflow:
             modules = self.report_for(state, "intake")["details"]["modules"]
             require(details.get("waves") == module_waves(modules), "Plan waves do not match module dependencies")
             tasks = details.get("tasks")
-            require(isinstance(tasks, dict) and set(tasks) == {m["id"] for m in modules},
-                    "Plan tasks must map every module ID to its implementation tasks")
-            for module in modules:
-                entries = tasks[module["id"]]
-                require(isinstance(entries, list) and entries, "Each module needs implementation tasks")
-                covered, ids = set(), set()
-                for task in entries:
-                    require(isinstance(task, dict), "Each task must be an object")
-                    tid = identifier(task.get("id"))
-                    require(tid not in ids, "Duplicate implementation task ID")
-                    ids.add(tid)
-                    nonempty(task.get("summary"), "task.summary")
-                    nonempty(task.get("verification"), "task.verification")
-                    claimed = strings(task.get("acceptance"), "task.acceptance")
-                    require(set(claimed) <= set(module["acceptance"]), "Task claims unknown module acceptance")
-                    covered.update(claimed)
-                require(covered == set(module["acceptance"]), "Plan tasks must cover module acceptance criteria")
+            from .quality import validate_tasks
+            validate_tasks(modules, tasks)
         elif stage == "implement":
             require(state["modules"] and all(m["status"] == "merged" for m in state["modules"].values()),
                     "All modules must be verified and merged through the wave executor")
@@ -362,6 +356,9 @@ class Workflow:
                 artifacts.extend(e["path"] for e in module["evidence"])
         elif stage in {"review", "integration"}:
             self.check_receipts(state, report, stage)
+            from .quality import enabled, closure
+            if enabled(state):
+                artifacts = [*artifacts, *closure(self, state)]
             artifacts = [*artifacts, *(e["path"] for r in state["runs"] if r["id"] in report["checks"] for e in r["evidence"])]
         elif stage in ADAPTER_STAGES:
             receipt = self.adapter_receipt(state, report, stage)
@@ -536,6 +533,8 @@ class Workflow:
         require(old["assistance"] == workflow["assistance"] or not state["modules"],
                 "Choose assistance before implementation planning; an active task cannot weaken its checkpoints")
         changed = set(affected or ())
+        if old["profile"] != "codex" and workflow["profile"] == "codex":
+            changed.add("intake")  # The new route requires a feasibility/test/task packet.
         changed.update(s for s in STAGES if old["enabled"][s] != workflow["enabled"][s])
         if old["order"] != workflow["order"] and workflow["enabled"]["integration"]:
             changed.update({"integration", "push"})

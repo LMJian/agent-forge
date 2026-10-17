@@ -5,6 +5,7 @@ independent; neither grants permission to push, create a PR, merge, schedule or 
 
 | Profile | Development stages | Default endpoint |
 | --- | --- | --- |
+| codex | intake (combined decision packet) → computed plan → implement → review | local |
 | light | intake → plan → implement → review | local |
 | standard | intake → design → design_audit → test_design → plan → implement → review | local |
 | release | standard stages plus design_approval before interfaces/plan | deployed |
@@ -33,8 +34,8 @@ The project-level `workflow` object and per-task CLI flags use the same options:
 
 ```json
 {
-  "profile": "standard",
-  "assistance": "guided",
+  "profile": "codex",
+  "assistance": "autonomous",
   "target": "local",
   "domain": "backend",
   "capabilities": {"recon": "auto", "design": "auto", "design_audit": "auto", "review": "builtin"},
@@ -47,8 +48,8 @@ The project-level `workflow` object and per-task CLI flags use the same options:
 
 | Option | Values and behavior |
 | --- | --- |
-| assistance | `guided` (default) returns one task with verified checkpoints; `autonomous` allows continuous work and ordered batch submission, with identical final checks |
-| profile | `light`, `standard`, `release`; default standard |
+| assistance | `guided` (explicit opt-in) returns one task with verified checkpoints; `autonomous` allows continuous work and ordered batch submission, with identical final checks |
+| profile | `codex`, `light`, `standard`, `release`; default codex |
 | target | `local`, `pushed`, `pr`, `merged`, `deployed`; omitted/null uses the profile default |
 | domain | `generic` (default), `backend`, `frontend`, `mixed`; backend selects bundled server design/audit methods |
 | capabilities | Logical providers for `recon`, `design`, `design_audit`, `review`: `auto`, `builtin`, a bundled name or a project skill name; never an absolute path |
@@ -58,7 +59,7 @@ The project-level `workflow` object and per-task CLI flags use the same options:
 | stages | Boolean overrides for `design`, `design_audit`, `test_design`, `design_approval`, `interfaces`, `integration`, `knowledge` |
 
 Interfaces and knowledge default off. Integration defaults on when the project assigns
-nonempty `stage_checks.integration`. Design audit/approval require design. Development entry requires the four core stages. Explicit `start-review` entry excludes pre-review
+nonempty `stage_checks.integration`. Design audit requires design. Codex design approval can use the combined intake packet. Development entry requires the four core stages. Explicit `start-review` entry excludes pre-review
 development stages without marking them as executed. Review and selected delivery stages cannot
 be disabled. `pushed` selects push without PR/monitor/release/deploy. A configured adapter alone
 does not select an external stage. There is no arbitrary stage reordering; integration's
@@ -88,7 +89,7 @@ for bundle-relative resolution, preparation and result requirements.
 
 ## Execution assistance and host capabilities
 
-Assistance is independent of task depth and delivery target. Guided mode is the default and
+Assistance is independent of task depth and delivery target. Autonomous mode is the default. Explicit guided mode
 runs implementation tasks sequentially with ordered verified checkpoints. Autonomous mode
 allows completing related tasks together. It permits parallel delegation only with actual host
 capability and authorization; otherwise modules remain serial. An active implementation cannot
@@ -100,3 +101,5 @@ model capability. Missing native support selects builtin execution before the op
 Permission denial, failed tests or uncertain effects never trigger automatic executor fallback.
 
 `start-review --goal ... --base ... --acceptance ... --target pushed` selects an existing-change review entry with the light profile. Its entry cannot be changed after creation. See [focused tasks](../../../references/focused-tasks.md).
+
+For new Codex tasks, use [the compact contract](../../../references/codex-workflow.md).

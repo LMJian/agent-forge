@@ -1,7 +1,7 @@
 [project]
 name = "harness-devflow"
 version = "1.0.0"
-description = "Provider-neutral, evidence-driven development workflow for coding agents"
+description = "Codex workflow with feasibility probes, acceptance evidence and automated verification"
 requires-python = ">=3.10"
 dependencies = []
 

@@ -1,4 +1,4 @@
-# Host execution contract
+# Advanced/legacy host execution contract
 
 The core owns project facts and completion rules. A host adapter executes a capability; the
 builtin implementation remains available. Selecting a host name never grants capabilities,
@@ -10,14 +10,14 @@ Project configuration uses this independent `host` object:
 
 ```json
 {
-  "name": "generic",
+  "name": "codex",
   "available": [],
   "command": {"provider": "auto"},
   "worktree": "auto"
 }
 ```
 
-Names such as `codex` and `claude-code` describe the current integration. Declare `worktree`,
+The supported host is Codex. Legacy host names remain readable for existing tasks. Declare `worktree`,
 `delegation` or `scheduling` in `available` only when the actual tool is callable in this session.
 The skill reads host tools/instructions; the Python CLI cannot inspect an agent's tool list.
 Use `host` or `doctor` to inspect the selected providers. The conservative default works with

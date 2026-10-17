@@ -16,7 +16,7 @@ STAGES = (
 GATES = {"design_approval", "release", "knowledge"}
 OPTIONAL = {"interfaces", "integration", "knowledge"}
 CORE = {"intake", "plan", "implement", "review"}
-PROFILES = ("light", "standard", "release")
+PROFILES = ("codex", "light", "standard", "release")
 ASSISTANCE = ("guided", "autonomous")
 CONFIG_SCHEMA = 2
 STATE_SCHEMA = 3
@@ -90,7 +90,7 @@ def default_config() -> dict:
 
 
 def workflow_defaults() -> dict:
-    return {"profile": "standard", "target": None, "isolation": "auto", "assistance": "guided", "entry": "develop",
+    return {"profile": "codex", "target": None, "isolation": "auto", "assistance": "autonomous", "entry": "develop",
             "integration_position": "before_push", "knowledge_approval": False, "stages": {},
             "domain": "generic", "capabilities": {slot: "auto" for slot in CAPABILITY_STAGES}}
 
@@ -127,8 +127,8 @@ def resolve_workflow(config: dict, overrides: dict | None = None) -> dict:
     profile = options["profile"]
     target = options["target"] or ("deployed" if profile == "release" else "local")
     enabled = {s: s in CORE for s in STAGES}
-    enabled.update(design=profile != "light", design_audit=profile != "light",
-                   test_design=profile != "light", design_approval=profile == "release",
+    enabled.update(design=profile in {"standard", "release"}, design_audit=profile in {"standard", "release"},
+                   test_design=profile in {"standard", "release"}, design_approval=profile == "release",
                    integration=bool(config["stage_checks"].get("integration")))
     enabled.update(options["stages"])
     enabled.update(push=target != "local", pr=target in {"pr", "merged", "deployed"},
@@ -140,7 +140,8 @@ def resolve_workflow(config: dict, overrides: dict | None = None) -> dict:
         require(not any(options["stages"].get(s) for s in before_review),
                 "Existing-change review cannot select development stages")
         enabled.update(dict.fromkeys(before_review, False))
-    require(not (enabled["design_audit"] or enabled["design_approval"]) or enabled["design"],
+    require(not enabled["design_audit"] or enabled["design"], "Design audit requires the design stage")
+    require(not enabled["design_approval"] or enabled["design"] or profile == "codex",
             "Design audit and approval require the design stage")
     require(not enabled["integration"] or options["integration_position"] != "after_push" or target != "local",
             "Integration after push requires a remote delivery target")
@@ -164,10 +165,12 @@ def validate_command(spec: Any, label: str, *, adapter: bool = False) -> None:
     require(type(timeout) is int and 1 <= timeout <= 86400, f"Invalid timeout in {label}")
     if "reuse" in spec:
         reuse = spec["reuse"]
-        require(isinstance(reuse, dict) and set(reuse) == {"context_files", "max_age_seconds", "assumptions"},
+        required = {"context_files", "max_age_seconds", "assumptions"}
+        require(isinstance(reuse, dict) and required <= set(reuse) <= required | {"across_stages"},
                 f"{label}.reuse requires context_files, max_age_seconds and assumptions")
         strings(reuse["context_files"], f"{label}.reuse.context_files", empty=True)
         nonempty(reuse["assumptions"], f"{label}.reuse.assumptions (why inputs are deterministic)")
+        require(type(reuse.get("across_stages", False)) is bool, "reuse.across_stages must be boolean")
         require(type(reuse["max_age_seconds"]) is int and 1 <= reuse["max_age_seconds"] <= 86400,
                 f"Invalid reuse age in {label}")
     if adapter:

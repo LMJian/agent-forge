@@ -63,8 +63,9 @@ def run(workflow: Workflow, kind: str, name: str, *, authorization: str | None =
             if stage == "deploy":
                 require(state["stages"]["release"]["status"] == "done", "Release approval is required")
         elif kind == "check":
-            require(stage in {"implement", "review", "integration"}, "Checks cannot run in this stage")
-            if stage != "implement":
+            probe = stage == "intake" and state["workflow"]["profile"] == "codex"
+            require(probe or stage in {"implement", "review", "integration"}, "Checks cannot run in this stage")
+            if stage != "implement" and not probe:
                 require(module is None and name in state["config"]["stage_checks"].get(stage, []),
                         "Check is not assigned to this stage")
         cwd = workflow.root

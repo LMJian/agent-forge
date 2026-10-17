@@ -28,15 +28,19 @@ def packet(workflow, state: dict) -> dict:
               "initial_dirty": state["initial_dirty"], "assistance": state["workflow"]["assistance"],
               "execution": resolve(state["config"]["host"], state["workflow"]["assistance"]),
               "status": summary["status"], "stage": stage, "inputs": inputs,
+              "test_progress": summary["test_progress"],
               "quality": "Only current code-bound check receipts and accepted artifacts satisfy completion"}
     result["history_command"] = command(workflow, "context", "--all")
     if state.get("review_context"):
         result["review_context"] = state["review_context"]
-    if not stage or state["aborted"]:
+    if state["aborted"]:
         result["action"] = {"kind": "finished"}
         return result
     if summary["stale"]:
         result["action"] = {"kind": "repair_evidence", "problems": summary["stale"]}
+        return result
+    if not stage:
+        result["action"] = {"kind": "finished"}
         return result
     unresolved = [r for r in state["runs"] if r["status"] in {"running", "unresolved"}]
     if unresolved:
@@ -92,6 +96,23 @@ def advance(workflow) -> dict:
     with file_lock(workflow.lock_path):
         state = workflow.load(active=False, config_check=False)
         result = packet(workflow, state)
+    # Codex authors one decision packet. The core materializes its accepted plan;
+    # it does not invent tasks, skip an approval, or re-author design documents.
+    if (state["workflow"]["profile"] == "codex" and result["status"] == "pending"
+            and result["action"]["kind"] not in {"inspect_execution", "repair_evidence"}):
+        if result["stage"] == "plan":
+            intake = workflow.report_for(state, "intake")
+            target = workflow.directory / "artifacts" / f"tasks-{uuid.uuid4().hex[:12]}.json"
+            atomic_json(target, intake["details"]["tasks"])
+            workflow.plan(str(target))
+            return advance(workflow)
+        if result["stage"] == "design_approval" and not state["workflow"]["enabled"]["design"]:
+            intake = workflow.report_for(state, "intake")
+            target = workflow.directory / "artifacts" / f"decision-{uuid.uuid4().hex[:12]}.json"
+            atomic_json(target, {"status": "pass", "summary": "Review the concrete Codex feasibility, design, test and task packet",
+                                 "artifacts": intake["artifacts"], "findings": []})
+            submit(workflow, str(target))
+            return advance(workflow)
     if result["stage"] and result["status"] == "pending" and result["action"]["kind"] not in {"inspect_execution", "repair_evidence"}:
         workflow.enter(result["stage"])
         with file_lock(workflow.lock_path):

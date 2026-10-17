@@ -1,46 +1,62 @@
 # Harness Devflow
 
-面向不同 AI 编码宿主和模型的通用研发插件。提供需求、调研、设计、实现、验证与交付流程，支持 **引导执行 / 自主执行**；宿主能力可接入，内置执行能力始终可用。当前版本 **1.0.0**，运行时仅依赖 **Python 3.10+ 与 Git**。
+面向 **Codex** 的研发插件，运行时仅依赖 Python 3.10+ 和 Git。新任务默认使用
+`profile=codex`、`assistance=autonomous`、`target=local`。不再分发其他宿主的插件清单，
+不按模型能力拆分流程；已有项目的配置和任务记录继续保留。
 
-专业方法由 Skills 提供；流程核心校验实际产物、代码版本和检查记录。Codex、Claude Code 或其他能读文件、执行命令的 Agent 使用同一套完成标准。
+## 默认流程：三个工作阶段
 
-## 三个独立的选择
-
-| 选择 | 作用 | 默认值 |
+| 阶段 | 实际工作 | 交付依据 |
 | --- | --- | --- |
-| 流程深度 `profile` | 决定设计、审查等必要阶段 | `standard` |
-| 执行引导 `assistance` | 决定逐任务检查点或自主连续执行 | `guided` |
-| 宿主能力 `host` | 决定原生接入或内置实现 | 通用宿主、内置命令、内置工作树、串行执行 |
+| 需求与可行性 | 合并需求、架构、风险、测试设计和任务计划；先跑关键假设的小型实验 | 一份决策包；未证明的关键风险阻止正式开发 |
+| 连续实现 | Codex 按任务持续实现和修复，按需隔离工作区 | 实际代码、模块检查、验收映射 |
+| 自测交付 | 自动化优先，运行产品入口、检查真实输出、审查差异 | 产品级用例台账和真实检查记录 |
 
-引导模式适合需要明确步骤、较短上下文或更强过程约束的任务。运行时每次返回一个具体任务、上游资料、验收和检查命令；每个实现任务通过检查点后再继续。自主模式允许连续执行和批量提交，仍要求最终检查、验收覆盖和交付门禁。
+内部仍有 `intake → plan → implement → review` 四个状态，其中 `plan` 从已接受的决策包
+自动生成，不需要另写计划文档。原来标准流程中的独立设计、设计审查、测试设计不再是默认关卡。
+要求设计确认时，启用 `design_approval`，只对具体决策包确认一次。批准范围变化时再确认；
+普通实现步骤不需要人逐项放行。`light`、`standard`、`release` 保留供已有任务和明确要求使用。
 
-模式由项目或用户选择，不依据厂商名称推断模型水平。缺少宿主能力时，内置流程仍可完成研发；能力声明也不构成并行、调度或发布授权。
+## 测试自动化与进度
 
-## 流程阶段
+- 先选择命令/API/回放；适合 GUI 的操作由 Codex 在已有授权范围内完成。
+- 每个场景声明执行者、环境、步骤和预期；人工项必须解释为何不能自动执行，并归入操作批次。
+- `verify` 顺序执行配置的检查，失败即停止；自动记录命令用例。不要让用户代替读取日志、文件和尺寸。
+- `test-progress` / `status` 提供通过、待执行、失败、阻塞、过期、明确取消、剩余人工项和批次数。
+- 单元测试和构建成功不能替代产品级验收；未执行/失败/过期项阻止完成。用户取消的用例记为排除，不算通过。
+- 显式声明确定性的本地检查可以跨实现、审查和集成复用；输入、环境、日志、时效或最新失败不符时重新执行。
+- 同一问题重复两次后，停止重复要求用户操作，保存输入并本地诊断；不能用又一个理想素材的成功宣称修复。
 
-| 配置 | 开发阶段 | 默认终点 |
-| --- | --- | --- |
-| `light` | 需求 → 计划 → 实现 → 审查与验证 | 本地 |
-| `standard` | 需求 → 设计 → 设计审查 → 测试设计 → 计划 → 实现 → 审查与验证 | 本地 |
-| `release` | 标准流程，增加设计确认 | 部署 |
+字段与边界详见 [Codex 合同](references/codex-workflow.md) 和 [决策包示例](docs/codex-packet.example.json)。
+程序能校验记录、输入一致性和覆盖，不能代替 Codex 判断实验是否有代表性、输出是否正确。
 
-完整阶段目录：
+## 使用
 
-```text
-intake → design → design_audit → test_design → design_approval
-       → interfaces → plan → implement → review → integration
-       → push → pr → monitor → release → deploy → knowledge
+安装完整目录后，在 Codex 中调用 `$harness-devflow:flow`。本地更新后应新开会话以加载新版 Skill。
+消费项目先填写真实检查命令，不能把占位命令配置为成功检查：
+
+```bash
+python3 /absolute/path/harness-devflow/scripts/harness.py --repo /path/to/project init --base main
+python3 /absolute/path/harness-devflow/scripts/harness.py --repo /path/to/project doctor
+python3 /absolute/path/harness-devflow/scripts/harness.py --repo /path/to/project --task export start --goal '实现导出功能'
+python3 /absolute/path/harness-devflow/scripts/harness.py --repo /path/to/project --task export next
 ```
 
-运行时按任务选择实际阶段。接口更新、集成测试、知识沉淀按需启用；集成测试可放到推送后，以验证远端预览环境。
+提交决策包后，`next` 处理所选审批和计算计划。实现检查可用 `verify --module MODULE`，最终检查用
+`verify`；实际人工/Agent 结果用 `record-case --result FILE` 记录。`--fresh` 强制重新执行检查。
+检查复用不伪装成新执行，也不自动批准设计、GUI、对外写入或部署。
 
 | 交付终点 | 结束条件 |
 | --- | --- |
-| `local` | 本地实现和验证完成，可以保留未提交修改 |
-| `pushed` | 推送已验证提交并核验远端 SHA；不创建 PR/MR |
-| `pr` | 推送已验证提交并创建真实 PR/MR |
-| `merged` | 观察到 PR/MR 已合并 |
-| `deployed` | 具体发布方案获得批准，部署返回成功结果 |
+| `local` | 本地实现和验收完成，可保留未提交修改 |
+| `pushed` | 推送并核验远端 SHA，不创建 PR |
+| `pr` | 创建真实评审请求 |
+| `merged` | 观察到合并 |
+| `deployed` | 发布批准和实际部署结果核验 |
+
+旧任务保持原来的 profile、检查和审批要求。需要真实范围变更时使用 `configure-flow`；不直接改状态文件。
+历史状态兼容只为保护已有工作，不再作为多宿主/多模型适配目标。正常 Codex 路径直接使用本地命令和
+Git 工作树；原有命令桥和外部适配器按项目需要保留，不在默认流程中要求配置。
 
 ## 16 个 Skills
 
@@ -65,83 +81,24 @@ intake → design → design_audit → test_design → design_approval
 
 Skills 按需加载。两个专业 Skills 及其全部资源随插件分发，与仓库根目录的独立版本逐字节一致，报告契约相同，两种方式生成的调研报告可以互相复用；流程调用时显式传递调研和设计产物，后续阶段读取实际引用的文件。
 
-## 宿主接入与内置后备
-
-| 能力 | 原生接入 | 内置后备 |
-| --- | --- | --- |
-| 检查命令 | 显式配置的可信命令桥接器 | 标准库子进程执行，记录退出码和日志 |
-| 工作树 | 宿主创建，核心核验后接入 | Git worktree 创建、验证与逐批合并 |
-| 多 Agent | 已开放且已授权的宿主工具 | 按依赖串行完成模块 |
-| 任务恢复 | 宿主会话 + 通用任务包 | 持久状态、`next` 和 `handoff` |
-| 持续观察 | 已授权的宿主调度工具 | 当前会话按需检查、下次恢复 |
-
-通过配置声明当前可用能力，不因检测到某个 CLI 或厂商名就自动开启。没有命令桥接器时，包括 Codex 和 Claude Code 在内的宿主都能通过自身终端工具调用内置检查执行器。原生能力执行失败或结果不明时，先核实结果，不自动换一种执行器重做。
-
-后台唤醒需要可用且已授权的调度器。插件不自带模型服务或常驻调度进程。详情见[宿主契约](references/hosts.md)。
-
-## 获取与使用
-
-复制或克隆完整 `harness-devflow/` 目录，保留 `.codex-plugin/`、`.claude-plugin/`、Skills、运行时及资源文件。
-
-Codex 安装后调用 `$harness-devflow:flow`。开发时也可以要求 Agent 阅读本目录 `skills/flow/SKILL.md`。
-
-Claude Code 可从目录加载：
-
-```bash
-claude --plugin-dir /absolute/path/harness-devflow
-```
-
-然后调用 `/harness-devflow:flow`。其他 Agent 可直接读取相同 Skill 并执行 CLI。
-
-在消费项目中初始化，填写 `.harness/project.json` 的真实检查命令：
-
-```bash
-python3 /absolute/path/harness-devflow/scripts/harness.py --repo /path/to/project init --base main
-python3 /absolute/path/harness-devflow/scripts/harness.py --repo /path/to/project doctor
-python3 /absolute/path/harness-devflow/scripts/harness.py --repo /path/to/project --task export start --goal '实现导出功能' --profile standard --assistance guided --domain backend
-python3 /absolute/path/harness-devflow/scripts/harness.py --repo /path/to/project --task export next
-```
-
-`next` 返回当前阶段、必要资料、专业方法和具体操作，并启动尚未开始的当前阶段。Agent 完成工作后使用 `submit --result <file>` 提交结果正文；机器报告外壳和可用检查记录由运行时生成。`status` 只读查看，`handoff --output <file>` 写出可在其他宿主读取的任务包。
-
-支持在 detached HEAD 工作区和有未提交修改的工作区启动。本地单模块可直接验证未提交内容；需要隔离并合并的模块仍要求干净起点及模块提交。提交变化仍使最终审查失效；显式启用的确定性测试可在输入不变时复用，最终审查和远端交付仍绑定明确提交。
-
-配置示例：[Python 引导执行](examples/python-light.json)、[Python 标准流程](examples/python-local.json)、[Node](examples/node-local.json)。用项目真实命令替换示例中的工具和目录。
-
-## 运行时保证与边界
-
-- 模块依赖、任务 ID、验收覆盖和引导检查点由程序校验。
-- 命令记录绑定实际代码指纹、命令配置、执行器、日志和结果。
-- 宿主工作树必须属于同一个 Git 仓库，并从要求的准确提交开始。
-- 失败、阻断、过期或未确认的外部执行不能算作完成。
-- 状态使用原子写入和文件锁；重试有界，冲突与中断保留恢复依据。
-- 代码审查、真实测试和项目批准分别记录；所有执行方式沿用同一交付门禁。
-
-这些约束帮助减少遗漏和无效重试。语义正确性和测试充分性仍需专业审查及真实任务评估。本地文件和 Git Hook 不提供防篡改的组织级强制边界，CI 与代码托管平台负责对应策略。
-
-本版本仅接受当前配置、任务和报告契约，不转换历史状态，也不提供旧命令别名。
-
-## 验证与文档
+## 验证与参考
 
 ```bash
 python3 -m unittest discover -s tests -v
 python3 scripts/validate_distribution.py
 ```
 
-测试使用临时 Git 仓库、真实检查命令及显式宿主测试桥接器。实际宿主安装、第三方平台认证及不同模型的编码效果需要分别验收。
+测试使用临时 Git 仓库、真实命令、工作树和公开 CLI，覆盖失败、输入变化、审批、产品验收、人工排除和旧任务兼容。
+测试用例不是其他宿主的产品兼容承诺。实际安装与新的真实项目效果需要分别记录。
 
-- [架构与职责边界](docs/architecture.md)
-- [Skills 职责与交接](docs/skill-guide.md)
+- [本次卷轴流程复盘与修改](docs/codex-retrospective.md)
 - [运行时与结果格式](skills/flow/references/runtime.md)
-- [流程与引导配置](skills/flow/references/profiles.md)
-- [宿主契约](references/hosts.md)
+- [流程配置](skills/flow/references/profiles.md)
 - [专业能力交接](references/capabilities.md)
 - [交付适配器](references/adapters.md)
-- [验证记录](docs/validation.md)
+- [已有改动与检查复用](references/focused-tasks.md)
+- [跨仓库关联](references/repository-groups.md)
+- [流程归属](references/routing.md)
 
-## 已有改动、检查复用与跨仓库协作
-
-- [轻量接手与检查复用](references/focused-tasks.md)：`start-review` 直接审查已有改动；`pushed` 支持只推送；确定性测试显式复用，最终审查重新绑定提交。
-- [跨仓库关联](references/repository-groups.md)：独立任务、固定提交、依赖声明和真实联调记录共同构成总任务证据。
-- [流程归属](references/routing.md)：一个任务只使用一个流程引擎，保留已有任务与明确选择。
-- `next` 按阶段和模块筛选资料；`ack-context` 记录已读版本，`context --all` 按需查看完整历史。
+状态采用原子写入、文件锁、代码指纹和证据摘要；拒绝将失败、未知或过期记录用于交付。
+这些是本地执行约束，不是防篡改认证服务。用户身份/语义判断仍依赖实际对话与 Codex 的审查。
