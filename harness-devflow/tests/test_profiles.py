@@ -154,6 +154,7 @@ class ProfileTests(RepoCase):
         self.assertEqual(result["stages"]["push"], "pending")
 
     def test_auto_isolation_uses_worktrees_for_multiple_modules(self):
+        self.flow.configure_flow({"isolation": "auto"}, "Fixture explicitly selects auto isolation; module consent is recorded before creation")
         self.finish("intake", details={"acceptance": ["AC-1"], "approach": "Two independent modules",
                     "verification": "Run module unit tests", "modules": [
                         {"id": "core", "acceptance": ["AC-1"]}, {"id": "api", "acceptance": ["AC-1"]}]})

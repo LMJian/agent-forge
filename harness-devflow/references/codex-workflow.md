@@ -14,12 +14,13 @@ parsing remains so existing projects can finish; it is not a promise of other-ho
    vertical slice and execute it on representative inputs before committing to the architecture.
 2. **Build** (`implement`): Codex completes related tasks continuously. The core materializes
    `plan` from the accepted packet; no separately authored plan is needed. Prefer one module;
-   create worktrees only when useful isolation is needed. No human per-task checkpoints.
+   stay on the current branch/checkout by default. Separate development branches/worktrees need
+   [explicit branch consent](branch-consent.md). No human per-task implementation checkpoints.
 3. **Verify and deliver** (`review`): execute the product path, inspect actual outputs, compare
    with an independent expected result, review the diff and fix failures. Use `verify` once per
    selected verification stage. Report acceptance coverage, excluded cases and the actual endpoint.
 
-`profile=codex`, `assistance=autonomous`, `target=local` are new-project defaults. Four internal
+`profile=codex`, `assistance=autonomous`, `target=local`, `isolation=checkout` are new-project defaults. Four internal
 states remain (`intake`, computed `plan`, `implement`, `review`); three require authored results.
 Existing explicitly selected profiles/assistance remain unchanged. `standard`/`release` are
 available when the user requires separate design documents. Never silently weaken a live task.
@@ -33,6 +34,10 @@ existing evidence instead of copying it into every stage. Required `details`:
 
 - Existing `acceptance`, `modules`, `approach`, `verification` fields.
 - `tasks`: module-to-task map used by `plan`, including acceptance IDs and real verification.
+- `journey`: user `entry`, `terminal_outcome`, and observable `steps` with `id`, `outcome`,
+  `acceptance`, and `proof=artifact|runtime`. Include every required handoff and final side effect,
+  such as system startup, background processing and durable save; a file-processing midpoint is
+  not the complete journey. A small library change can have one public-entry step.
 - `feasibility.assessment`: identify novel technical assumptions or explain why this is low risk.
   `risks`: `{id, assumption, critical, status}`. `unproven` critical risks block intake completion.
   `proven` risks need `experiment`, `expected`, `observed`, `evidence` paths included in artifacts;
@@ -44,6 +49,11 @@ existing evidence instead of copying it into every stage. Required `details`:
   acceptance criterion needs at least one `level=product` scenario. `component` checks supplement
   it. The level labels the tested boundary, not the test framework: CLI/API smoke tests may prove
   product behavior, while successful compilation or a mocked happy path does not.
+  Product scenarios additionally declare `steps`, `proof=artifact|runtime` and `oracle` (independent
+  expected result and its source). A command's `checks.NAME.proof` must match; build/static/component
+  checks cannot masquerade as product evidence. Artifact replay cannot satisfy a runtime step.
+  All journey steps need scenarios, including pending device/permission work. Missing authorization
+  is not permission to silently remove a requirement or mark its runtime behavior passed.
 
 Run a configured probe during intake with `run-check NAME`. Do not replace a critical full-path
 experiment with a library import/build check. Define a go/no-go metric before executing it;
@@ -55,6 +65,13 @@ hardware prevent proof, state the blocker and narrow the authorized scope; do no
 
 The core checks structure, receipts and freshness. Codex must assess whether the experiment and
 oracle genuinely prove the assumption. It cannot infer semantic quality from exit code zero.
+
+For a known failure, first replay the retained failing input/path against an independent expected
+outcome. Confirm the original failure is detected (when the baseline is available), then the fix.
+A test that accepts a recoverable error or partial result proves error handling, not completion of
+the user's requested operation. Reference parity proves equivalence; assess correctness separately
+unless equivalence itself is the accepted goal. A user's confirmed successful use is user evidence,
+not an agent-executed test; preserve that distinction without repeating already accepted work.
 
 ## Automation first, bounded human work
 
@@ -86,8 +103,14 @@ record it as `waived` and report the limit; do not mark it passed or request it 
 
 ## Acceptance ledger and check reuse
 
+`verify-plan [--module ID]` is read-only: show check order, covered cases, eligible reuse and prior
+durations. Its estimate excludes unknown durations and manual/device work; do not invent a deadline.
+Declare `checks.NAME.tier=critical|regression|packaging` (default `regression`) to run the smallest
+real user-path/known-failure gate first, then regression and packaging. Preserve declared order
+within a tier and build-output dependencies. Do not add unrelated broad suites to inflate counts.
+
 `test-progress` is read-only and `status` includes the same counts. `verify [--module ID] [--fresh]`
-runs configured checks sequentially, stops on failure, and automatically records command cases
+runs checks in tier order, stops on failure, and automatically records command cases
 in final verification. It never executes human/agent cases or auto-approves a decision.
 
 For observed manual/agent results, write a body and run `record-case --result FILE`:
@@ -117,7 +140,8 @@ For deterministic *local* commands only, opt in under `checks.NAME.reuse`:
 }
 ```
 
-Then `verify` can reuse a same-checkout module/review/integration receipt. It rechecks tested bytes,
+Then `verify` can reuse a same-checkout receipt, including repeated checks in the same running
+module; cross-stage reuse still needs `across_stages`. It rechecks tested bytes,
 file modes, executable, environment, configuration, declared ignored inputs, logs, original age,
 and newer failures. Reuse retains the original execution timestamp; it is not another run.
 Without `across_stages`, the old review-to-review policy remains. Worktree moves, native bridges,
@@ -125,3 +149,6 @@ network/device/live-environment checks run afresh. Do not make signed bundles or
 unless every ignored output/input and revision dependency is declared. Use `--fresh` when needed.
 Keep integration as a separate stage only for a distinct environment/contract; put a local end-to-end
 check in review when it shares that environment. Never drop an existing required check to save time.
+Do not run the same selected batch through both `run-check` and `verify` without a new input,
+failure or explicit freshness reason. Opt in only after reviewing deterministic inputs; device,
+network and unsigned/signed archive differences cannot be hidden by cache reuse.

@@ -97,7 +97,7 @@ class ExistingChangesTests(RepoCase):
         self.assertEqual(copied["finished_at"], receipt["finished_at"])
         self.finish_review()
         self.assertEqual(gates.gate(self.flow)["head"], vcs.head(self.root))
-        with self.assertRaisesRegex(HarnessError, "running local review"):
+        with self.assertRaisesRegex(HarnessError, "running local .*stage"):
             reuse(self.flow, "unit", receipt["id"])
 
     def test_changed_code_ignored_inputs_environment_and_logs_each_reject_reuse(self):

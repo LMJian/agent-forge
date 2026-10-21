@@ -9,7 +9,8 @@ Read [the runtime contract](../flow/references/runtime.md). Run `next` for the s
 
 For `profile=codex`, follow [the Codex contract](../../references/codex-workflow.md).
 Produce one decision packet with architecture/interfaces, feasibility probes, test ownership and
-inline tasks. Use `run-check` during intake for critical assumptions. An unproven primary outcome
+inline tasks. Include the actual user-entry-to-terminal-outcome journey and evidence for each step;
+see the packet example in the Codex contract. Use `run-check` during intake for critical assumptions. An unproven primary outcome
 blocks full implementation; do not call successful imports/builds proof of product feasibility.
 The same packet is used for a selected design approval and the automatically computed plan.
 
@@ -19,7 +20,7 @@ Use recon findings or focused direct reads to map the change to existing compone
 
 Write requirements Markdown: observable behavior, scope, stable acceptance IDs, module boundaries and open decisions. Link the recon baseline instead of repeating its traces; reference its validation scenarios when defining acceptance. Supply `details.acceptance` and `details.modules`. Every criterion must be owned; unknown, duplicate and cyclic dependencies are rejected. Recon results supplement this report and never replace its acceptance/module contract.
 
-When design is not selected, include a concrete short `details.approach`. When test design is not selected, include `details.verification` explaining how observable acceptance will be checked. The light profile carries these decisions here, without separate design documents. `checkout` isolation supports one module; multiple modules use auto/worktree isolation.
+When design is not selected, include a concrete short `details.approach`. When test design is not selected, include `details.verification` explaining how observable acceptance will be checked. The light profile carries these decisions here, without separate design documents. Default to one module in the current checkout. Multiple isolated modules require explicit branch/worktree consent; never choose isolation to bypass that boundary.
 
 Validate the split against real contracts and implementation boundaries. Complete `intake` and follow the next selected stage from status.
 

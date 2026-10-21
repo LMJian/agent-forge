@@ -1,7 +1,7 @@
 # Harness Devflow
 
 面向 **Codex** 的研发插件，运行时仅依赖 Python 3.10+ 和 Git。新任务默认使用
-`profile=codex`、`assistance=autonomous`、`target=local`。不再分发其他宿主的插件清单，
+`profile=codex`、`assistance=autonomous`、`target=local`、`isolation=checkout`。不再分发其他宿主的插件清单，
 不按模型能力拆分流程；已有项目的配置和任务记录继续保留。
 
 ## 默认流程：三个工作阶段
@@ -9,7 +9,7 @@
 | 阶段 | 实际工作 | 交付依据 |
 | --- | --- | --- |
 | 需求与可行性 | 合并需求、架构、风险、测试设计和任务计划；先跑关键假设的小型实验 | 一份决策包；未证明的关键风险阻止正式开发 |
-| 连续实现 | Codex 按任务持续实现和修复，按需隔离工作区 | 实际代码、模块检查、验收映射 |
+| 连续实现 | Codex 在当前分支持续实现和修复，另开开发分支／worktree 先获用户同意 | 实际代码、模块检查、验收映射 |
 | 自测交付 | 自动化优先，运行产品入口、检查真实输出、审查差异 | 产品级用例台账和真实检查记录 |
 
 内部仍有 `intake → plan → implement → review` 四个状态，其中 `plan` 从已接受的决策包
@@ -20,15 +20,19 @@
 ## 测试自动化与进度
 
 - 先选择命令/API/回放；适合 GUI 的操作由 Codex 在已有授权范围内完成。
-- 每个场景声明执行者、环境、步骤和预期；人工项必须解释为何不能自动执行，并归入操作批次。
-- `verify` 顺序执行配置的检查，失败即停止；自动记录命令用例。不要让用户代替读取日志、文件和尺寸。
+- 决策包列出从用户入口到最终结果的 `journey`，每一步都有观察结果和证据边界；场景通过 `steps` 映射，`proof` 区分运行时与文件产物，`oracle` 说明独立预期来源。
+- 人工项必须解释为何不能自动执行，并归入操作批次。未获设备操作授权时保持待验证，不能删除那一步后宣称全部通过。
+- `verify-plan` 显示检查顺序、覆盖场景、可复用结果和历史耗时估算；`verify` 先执行 `critical`，再执行 `regression` 与 `packaging`，失败即停止。
 - `test-progress` / `status` 提供通过、待执行、失败、阻塞、过期、明确取消、剩余人工项和批次数。
 - 单元测试和构建成功不能替代产品级验收；未执行/失败/过期项阻止完成。用户取消的用例记为排除，不算通过。
-- 显式声明确定性的本地检查可以跨实现、审查和集成复用；输入、环境、日志、时效或最新失败不符时重新执行。
+- 显式声明确定性的本地检查可以在同一模块内复用，声明 `across_stages` 后可跨实现、审查和集成复用；输入、环境、日志、时效或最新失败不符时重新执行。
 - 同一问题重复两次后，停止重复要求用户操作，保存输入并本地诊断；不能用又一个理想素材的成功宣称修复。
 
 字段与边界详见 [Codex 合同](references/codex-workflow.md) 和 [决策包示例](docs/codex-packet.example.json)。
 程序能校验记录、输入一致性和覆盖，不能代替 Codex 判断实验是否有代表性、输出是否正确。
+默认在当前分支开发；新建／切换开发分支或另开 worktree 必须先有明确用户请求或同意。
+运行时阻止未经记录授权的工作树创建和分支绑定；原始 Git 命令同样遵守
+[分支授权规则](references/branch-consent.md)，不能用工具切换绕过。
 
 ## 使用
 
@@ -43,7 +47,7 @@ python3 /absolute/path/harness-devflow/scripts/harness.py --repo /path/to/projec
 ```
 
 提交决策包后，`next` 处理所选审批和计算计划。实现检查可用 `verify --module MODULE`，最终检查用
-`verify`；实际人工/Agent 结果用 `record-case --result FILE` 记录。`--fresh` 强制重新执行检查。
+`verify`，执行前可用 `verify-plan` 查看成本；实际人工/Agent 结果用 `record-case --result FILE` 记录。`--fresh` 强制重新执行检查。
 检查复用不伪装成新执行，也不自动批准设计、GUI、对外写入或部署。
 
 | 交付终点 | 结束条件 |
@@ -91,7 +95,7 @@ python3 scripts/validate_distribution.py
 测试使用临时 Git 仓库、真实命令、工作树和公开 CLI，覆盖失败、输入变化、审批、产品验收、人工排除和旧任务兼容。
 测试用例不是其他宿主的产品兼容承诺。实际安装与新的真实项目效果需要分别记录。
 
-- [本次卷轴流程复盘与修改](docs/codex-retrospective.md)
+- [Codex 工作流设计依据](docs/codex-retrospective.md)
 - [运行时与结果格式](skills/flow/references/runtime.md)
 - [流程配置](skills/flow/references/profiles.md)
 - [专业能力交接](references/capabilities.md)

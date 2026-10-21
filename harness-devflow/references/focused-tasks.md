@@ -26,7 +26,7 @@ remote. A failed readback is an unverified outcome; reconcile remote state befor
 
 ## Opt-in deterministic checks
 
-Checks always execute unless `reuse-check` is explicitly requested. To make an offline,
+Checks execute unless `verify` or `reuse-check` finds an explicitly eligible prior receipt. To make an offline,
 deterministic check eligible, add `reuse` to its existing check specification:
 
 ```json
@@ -61,8 +61,10 @@ reuse-check unit --from <original-executed-review-run-id>
 submit --result <new-review-result.json>
 ```
 
-If review is still running, omit `reopen`. Reuse is limited to the same task, checkout and review
-check. It does not reuse implementation/integration checks or external adapters. An intervening
+If review is still running, omit `reopen`. Reuse is limited to the same task, checkout and check.
+Repeated verification of a running checkout module can reuse its own receipt; other-stage reuse
+requires `reuse.across_stages=true` as described in the [Codex contract](codex-workflow.md).
+External adapters never reuse check results. An intervening
 failed check, changed inputs, modified evidence or expired original result rejects reuse. A reused
 receipt points at original execution logs and retains the original timestamps; it does not extend
 their lifetime. Inputs and expiry are rechecked at submission and before delivery. The final

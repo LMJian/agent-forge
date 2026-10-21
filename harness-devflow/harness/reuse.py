@@ -41,37 +41,52 @@ def inputs(workflow, state: dict, spec: dict, cwd: Path) -> dict | None:
             "context_files": files, "command": digest(spec), "config": state["execution_hash"]}
 
 
-def reuse(workflow, name: str, source_id: str) -> dict:
+def validate_source(workflow, state, name, source_id, module=None):
+    """Read-only eligibility; execution repeats this check under the task lock."""
+    stage = current(state)
+    require(stage in {"implement", "review", "integration"}, "Reuse requires implementation or final verification")
+    require((module is not None) == (stage == "implement"), "Implementation reuse needs its module")
+    if module is not None:
+        item = state["modules"].get(module, {})
+        require(item.get("status") == "running" and item.get("worktree") == str(workflow.root),
+                "Module reuse requires the same running owning checkout")
+    names = state["config"]["stage_checks"].get("review" if module else stage, [])
+    require(name in names, "Check is not assigned to this stage")
+    spec = state["config"]["checks"][name]
+    cross_stage = spec.get("reuse", {}).get("across_stages", False)
+    require(stage != "integration" or cross_stage, "Integration reuse requires explicit across_stages policy")
+    source = next((r for r in state["runs"] if r["id"] == source_id), None)
+    allowed = source and ((module is not None and source["stage"] == "implement" and source.get("module") == module) or
+                         (module is None and ((source["stage"] == "review" and source.get("module") is None) or
+                          (cross_stage and source["stage"] in {"implement", "review", "integration"}))))
+    require(allowed and source["kind"] == "check" and source["name"] == name and
+            source["status"] == "passed" and source["cwd"] == str(workflow.root),
+            "Reuse requires a successful review check or eligible module check from this task and checkout")
+    require(not source.get("reused_from"), "Select the original executed check, not a reused receipt")
+    require(source.get("reuse_inputs"), "This check was not executed with an explicit reuse policy")
+    require(not any(r["kind"] == "check" and r["name"] == name and r["status"] == "failed"
+                    for r in state["runs"][state["runs"].index(source) + 1:]),
+            "A newer failed check supersedes this result; execute a fresh check")
+    require(inputs(workflow, state, spec, workflow.root) == source["reuse_inputs"],
+            "Check inputs, configuration or environment changed; execute a fresh check")
+    age = (datetime.now(timezone.utc) - datetime.fromisoformat(source["finished_at"])).total_seconds()
+    require(0 <= age <= min(spec["reuse"]["max_age_seconds"], state["config"]["review_max_age_seconds"]),
+            "Original check expired; execute a fresh check")
+    verify_snapshots(workflow.root, source["evidence"])
+    return source
+
+
+def reuse(workflow, name: str, source_id: str, module=None) -> dict:
     with file_lock(workflow.lock_path):
         state = workflow.load()
         workflow.consistent(state)
         stage = current(state)
-        require(stage in {"review", "integration"} and state["stages"][stage]["status"] == "running",
-                "Reuse requires a running local review or integration stage")
+        require(stage in {"implement", "review", "integration"} and state["stages"][stage]["status"] == "running",
+                "Reuse requires a running local implementation, review or integration stage")
         require(not any(r["status"] in {"running", "unresolved"} for r in state["runs"]),
                 "Resolve in-flight commands before reusing checks")
-        require(name in state["config"]["stage_checks"].get(stage, []), "Check is not assigned to this stage")
-        spec = state["config"]["checks"][name]
-        cross_stage = spec.get("reuse", {}).get("across_stages", False)
-        require(stage == "review" or cross_stage, "Integration reuse requires explicit across_stages policy")
-        source = next((r for r in state["runs"] if r["id"] == source_id), None)
-        require(source and source["kind"] == "check" and source["name"] == name and
-                source["status"] == "passed" and source["cwd"] == str(workflow.root) and
-                ((source["stage"] == "review" and source.get("module") is None) or
-                 (cross_stage and source["stage"] in {"implement", "review", "integration"})),
-                "Reuse requires a successful review check from this task and checkout")
-        require(not source.get("reused_from"), "Select the original executed check, not a reused receipt")
-        require(source.get("reuse_inputs"), "This check was not executed with an explicit reuse policy")
-        require(not any(r["kind"] == "check" and r["name"] == name and r["status"] == "failed"
-                        for r in state["runs"][state["runs"].index(source) + 1:]),
-                "A newer failed check supersedes this result; execute a fresh check")
-        current_inputs = inputs(workflow, state, spec, workflow.root)
-        require(current_inputs == source["reuse_inputs"], "Check inputs, configuration or environment changed; execute a fresh check")
-        age = (datetime.now(timezone.utc) - datetime.fromisoformat(source["finished_at"])).total_seconds()
-        require(0 <= age <= min(spec["reuse"]["max_age_seconds"], state["config"]["review_max_age_seconds"]),
-                "Original check expired; execute a fresh check")
-        verify_snapshots(workflow.root, source["evidence"])
-        receipt = {**source, "id": uuid.uuid4().hex, "stage": stage, "module": None,
+        source = validate_source(workflow, state, name, source_id, module=module)
+        receipt = {**source, "id": uuid.uuid4().hex, "stage": stage, "module": module,
                    "epoch": state["stages"][stage]["epoch"],
                    "fingerprint": vcs.fingerprint(workflow.root), "head": vcs.head(workflow.root),
                    "reused_from": source_id, "reused_at": now()}

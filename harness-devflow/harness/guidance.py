@@ -86,6 +86,13 @@ def packet(workflow, state: dict) -> dict:
         else:
             action = {"kind": "implement_task" if remaining else "submit_module",
                       "instruction": "Implement the listed behavior, run checks, and record a checkpoint with actual artifacts"}
+        if state["execution_mode"] == "worktree" and module["status"] in {"pending", "awaiting_host"}:
+            from .branches import approved
+            if not approved(state, module=mid):
+                action = {"kind": "approval", "scope": "branch", "module": mid,
+                          "instruction": "Default to the current checkout. A separate development worktree needs explicit user consent.",
+                          "command": command(workflow, "authorize-branch", "--module", mid,
+                                             "--actor", "user", "--note", "<actual user approval>")}
         result["action"] = action
     else:
         result["action"] = {"kind": "execute_skill", "completion": command(workflow, "submit", "--result", "<result.json>")}

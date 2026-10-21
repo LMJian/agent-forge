@@ -205,6 +205,9 @@ class Workflow:
         with file_lock(inside(self.root, ".harness/runs/start.lock")), file_lock(self.lock_path):
             state = self.load(active=False, branch_check=False)
             require(state["branch"] is None and vcs.branch(self.root), "Only a detached task can bind a newly named branch")
+            from .branches import require_approval
+            authorization = require_approval(state, branch=vcs.branch(self.root))
+            require(authorization["head"] == vcs.head(self.root), "Branch consent is for a different commit")
             require(not any(r["status"] in {"running", "unresolved"} for r in state["runs"]), "Inspect active executions first")
             self.consistent(state)
             known = {state["initial_fingerprint"], *(s.get("fingerprint") for s in state["stages"].values())}

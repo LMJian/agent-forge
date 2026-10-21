@@ -4,7 +4,7 @@
   "workflow": {
     "profile": "light",
     "target": "local",
-    "isolation": "auto",
+    "isolation": "checkout",
     "assistance": "guided"
   },
   "checks": {

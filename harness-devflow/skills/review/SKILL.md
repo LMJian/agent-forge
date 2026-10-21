@@ -16,7 +16,12 @@ Use [capability handoff](../../references/capabilities.md): `use-skill review --
 
 Read intake acceptance, planned verification and any selected design/scenario artifacts; review the diff from the recorded base SHA through HEAD and all relevant staged, unstaged and untracked changes. Light tasks use their compact approach and verification, without requiring missing design documents. Assess changed behavior and its necessary context; avoid unrelated historical cleanup. Cover correctness, security, concurrency, compatibility and operational risks as applicable. Record material coverage gaps honestly.
 
-Run configured review checks using `run-check <name>`. For a check previously executed with an explicit deterministic reuse policy, `reuse-check <name> --from <original-run-id>` may reuse unchanged inputs; see [focused tasks](../../references/focused-tasks.md). A new commit still invalidates the final review: reopen review, reassess the final diff and submit a new report even when an eligible test result is reused. Inspect failed logs, make bounded fixes, and reassess affected findings. Never invent findings or successful checks.
+Inspect `verify-plan`, then use `verify` for the selected batch. Run the real entry/known-failure gate before expensive regression and packaging. Reuse unchanged deterministic evidence only under its declared policy; see [focused tasks](../../references/focused-tasks.md). Do not rerun the same batch merely to produce another stage receipt. A new commit still invalidates the final review: reopen review, reassess the final diff and submit a new report even when an eligible test result is reused. Inspect failed logs, make bounded fixes, and reassess affected findings. Never invent findings or successful checks.
+
+Trace the accepted journey through its final observable side effect. Check the oracle and actual
+environment for each step: file replay, source inspection and compilation cannot prove OS control,
+background lifecycle or external persistence. Error-reporting/partial-output tests do not prove a
+successful product outcome. Preserve unexecuted steps as pending or explicitly user-waived.
 
 Write the report with an explicit findings array, code/evidence anchors and all required check receipt IDs. Complete `review` only with no unresolved blockers and fresh successful checks. A check's exit code establishes command success; assess whether its assertions actually cover the intended behavior.
 

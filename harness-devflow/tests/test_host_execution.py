@@ -246,6 +246,8 @@ class PortableExecutionTests(RepoCase):
         self.flow.enter("review")
         receipt = runner.run(self.flow, "check", "unit")
         self.flow.complete("review", str(self.report("review", checks=[receipt["id"]])))
+        self.cli("authorize-branch", "--branch", "host-created-branch", "--actor", "user",
+                 "--note", "Fixture user requests naming this detached checkout host-created-branch")
         self.git("switch", "-c", "host-created-branch")
         result = self.cli("bind-branch", "--reason", "Name the verified detached work for delivery")
         self.assertEqual(result["status"], "complete")

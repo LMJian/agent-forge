@@ -39,7 +39,7 @@ The project-level `workflow` object and per-task CLI flags use the same options:
   "target": "local",
   "domain": "backend",
   "capabilities": {"recon": "auto", "design": "auto", "design_audit": "auto", "review": "builtin"},
-  "isolation": "auto",
+  "isolation": "checkout",
   "integration_position": "before_push",
   "knowledge_approval": false,
   "stages": {"interfaces": false, "knowledge": false}
@@ -53,7 +53,7 @@ The project-level `workflow` object and per-task CLI flags use the same options:
 | target | `local`, `pushed`, `pr`, `merged`, `deployed`; omitted/null uses the profile default |
 | domain | `generic` (default), `backend`, `frontend`, `mixed`; backend selects bundled server design/audit methods |
 | capabilities | Logical providers for `recon`, `design`, `design_audit`, `review`: `auto`, `builtin`, a bundled name or a project skill name; never an absolute path |
-| isolation | `auto`: checkout for one module, worktrees for multiple; `checkout`: one module only; `worktree`: always isolated |
+| isolation | `checkout` (default): one module in the current checkout; `auto`: checkout for one module, worktrees for multiple; `worktree`: always isolated. Separate development branches/worktrees require explicit user consent regardless of this setting; see [branch consent](../../../references/branch-consent.md) |
 | integration_position | `before_push` by default; `after_push` for a pushed preview/environment, requiring a remote endpoint when integration is selected |
 | knowledge_approval | false by default; true requires approval of notes, never of a `no_changes` outcome |
 | stages | Boolean overrides for `design`, `design_audit`, `test_design`, `design_approval`, `interfaces`, `integration`, `knowledge` |

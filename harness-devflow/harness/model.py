@@ -90,7 +90,7 @@ def default_config() -> dict:
 
 
 def workflow_defaults() -> dict:
-    return {"profile": "codex", "target": None, "isolation": "auto", "assistance": "autonomous", "entry": "develop",
+    return {"profile": "codex", "target": None, "isolation": "checkout", "assistance": "autonomous", "entry": "develop",
             "integration_position": "before_push", "knowledge_approval": False, "stages": {},
             "domain": "generic", "capabilities": {slot: "auto" for slot in CAPABILITY_STAGES}}
 
@@ -154,8 +154,13 @@ def resolve_workflow(config: dict, overrides: dict | None = None) -> dict:
 
 def validate_command(spec: Any, label: str, *, adapter: bool = False) -> None:
     require(isinstance(spec, dict), f"{label} must be an object")
-    require(set(spec) <= ({"argv", "timeout_seconds", "effect"} if adapter else {"argv", "timeout_seconds", "reuse"}),
+    require(set(spec) <= ({"argv", "timeout_seconds", "effect"} if adapter else {"argv", "timeout_seconds", "reuse", "proof", "tier"}),
             f"Unknown command option in {label}")
+    if not adapter:
+        require(spec.get("proof", "component") in {"static", "build", "component", "artifact", "runtime"},
+                f"Invalid proof boundary in {label}")
+        require(spec.get("tier", "regression") in {"critical", "regression", "packaging"},
+                f"Invalid verification tier in {label}")
     argv = spec.get("argv")
     require(isinstance(argv, list) and bool(argv), f"{label}.argv must be a nonempty array")
     for arg in argv:

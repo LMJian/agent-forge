@@ -27,6 +27,7 @@ class CodexFlowTests(RepoCase):
         config["checks"]["unit"]["reuse"] = {
             "context_files": [], "max_age_seconds": 7200, "across_stages": True,
             "assumptions": "Offline deterministic Python behavior; no stage, Git or external state inputs"}
+        config["checks"]["unit"]["proof"] = "runtime"
         atomic_json(self.root / ".harness/project.json", config)
         self.commit("Configure Codex local route")
         self.flow = Workflow(self.root, "codex")
@@ -34,11 +35,14 @@ class CodexFlowTests(RepoCase):
         self.artifact = self.write(".harness/runs/codex/artifacts/decision.md", "Observable value=2; retain old value=1.\n")
         self.details = {"acceptance": ["AC-1"], "modules": [{"id": "core", "acceptance": ["AC-1"]}],
                         "approach": "Add a pure public value function", "verification": "Exercise the public behavior",
+                        "journey": {"entry": "Call the public value API", "terminal_outcome": "Caller receives 2",
+                                    "steps": [{"id": "value", "outcome": "Public value is 2", "proof": "runtime", "acceptance": ["AC-1"]}]},
                         "feasibility": {"assessment": "Known local Python runtime, no novel algorithm or device dependency", "risks": []},
                         "tasks": {"core": [{"id": "build", "summary": "Implement public behavior", "acceptance": ["AC-1"],
                                             "verification": "Call value and assert 2"}]},
                         "scenarios": [{"id": "value", "acceptance": ["AC-1"], "executor": "command", "check": "unit",
-                                       "level": "product", "environment": "Local Python process",
+                                       "level": "product", "proof": "runtime", "steps": ["value"],
+                                       "oracle": "API requirement specifies 2, independently of its implementation", "environment": "Local Python process",
                                        "procedure": "Invoke public value function", "expected": "Returns 2, retains base value=1"}]}
 
     def body(self, name, **extra):
@@ -75,6 +79,7 @@ class CodexFlowTests(RepoCase):
         flow = resolve_workflow(cfg)
         self.assertEqual(flow["profile"], "codex")
         self.assertEqual(flow["assistance"], "autonomous")
+        self.assertEqual(flow["isolation"], "checkout")
         self.assertEqual([s for s in flow["order"] if flow["enabled"][s]], ["intake", "plan", "implement", "review"])
 
     def test_public_cli_finishes_with_one_execution_across_three_stages(self):
@@ -123,6 +128,71 @@ class CodexFlowTests(RepoCase):
         self.details["scenarios"][0]["level"] = "component"
         result = self.cli("submit", "--result", str(self.body("unit-only", details=self.details)), expected=2)
         self.assertIn("product-level", str(result))
+
+    def test_missing_terminal_side_effect_scenario_blocks_intake(self):
+        self.details["journey"]["terminal_outcome"] = "Image is saved in Photos"
+        self.details["journey"]["steps"].append({"id": "save", "outcome": "Read back saved image", "proof": "runtime", "acceptance": ["AC-1"]})
+        result = self.cli("submit", "--result", str(self.body("missing-save", details=self.details)), expected=2)
+        self.assertIn("untested steps", str(result))
+        self.assertFalse(self.flow.load()["modules"])
+
+    def test_artifact_replay_cannot_prove_native_runtime_even_if_named_product(self):
+        config = read_json(self.root / ".harness/project.json")
+        config["checks"]["unit"]["proof"] = "artifact"
+        atomic_json(self.root / ".harness/project.json", config)
+        self.flow.sync_config("Fixture replay only examines saved files")
+        self.details["scenarios"][0]["proof"] = "artifact"
+        result = self.cli("submit", "--result", str(self.body("wrong-boundary", details=self.details)), expected=2)
+        self.assertIn("cannot prove a runtime", str(result))
+
+    def test_build_check_cannot_masquerade_as_runtime(self):
+        config = read_json(self.root / ".harness/project.json")
+        config["checks"]["unit"]["proof"] = "build"
+        atomic_json(self.root / ".harness/project.json", config)
+        self.flow.sync_config("Fixture has build evidence only")
+        result = self.cli("submit", "--result", str(self.body("build-only", details=self.details)), expected=2)
+        self.assertIn("check boundary", str(result))
+
+    def test_current_module_reuses_unchanged_inputs_and_fresh_forces_execution(self):
+        self.intake()
+        self.cli("next")
+        _, first = self.implement_module()
+        before = len(self.flow.load()["runs"])
+        planned = self.cli("verify-plan", "--module", "core")
+        self.assertEqual(len(self.flow.load()["runs"]), before)
+        self.assertEqual(planned["checks"][0]["reuse_from"], first["id"])
+        self.assertEqual(planned["estimated_seconds"], 0)
+        result = self.cli("verify", "--module", "core")
+        self.assertEqual((result["executed"], result["reused"]), (0, 1))
+        result = self.cli("verify", "--module", "core", "--fresh")
+        self.assertEqual((result["executed"], result["reused"]), (1, 0))
+
+    def test_critical_failure_runs_before_broad_regression_and_stops_batch(self):
+        config = read_json(self.root / ".harness/project.json")
+        config["checks"]["entry-smoke"] = {"argv": [sys.executable, "-c", "raise SystemExit(1)"], "tier": "critical", "proof": "runtime"}
+        config["stage_checks"]["review"].append("entry-smoke")
+        atomic_json(self.root / ".harness/project.json", config)
+        self.flow.sync_config("Run the real entry gate first in the fixture")
+        self.intake()
+        self.cli("next")
+        self.cli("prepare-module", "core")
+        planned = self.cli("verify-plan", "--module", "core")
+        self.assertEqual([c["name"] for c in planned["checks"]], ["entry-smoke", "unit"])
+        result = self.cli("verify", "--module", "core", expected=1)
+        self.assertEqual([c["name"] for c in result["checks"]], ["entry-smoke"])
+        self.assertEqual(result["remaining"], ["unit"])
+
+    def test_post_delivery_failure_invalidates_green_completion(self):
+        self.implement()
+        self.cli("verify")
+        self.cli("submit", "--result", str(self.body("review")))
+        self.cli("verify")
+        self.cli("submit", "--result", str(self.body("integration")))
+        self.assertEqual(self.cli("next")["action"]["kind"], "finished")
+        record_body(self.flow, {"case": "value", "status": "failed", "summary": "User observes incorrect public output",
+                               "actor": "user", "authorization": "Fixture reports value is wrong", "artifacts": [str(self.artifact)]})
+        self.assertEqual(self.cli("test-progress")["failed"], 1)
+        self.assertEqual(self.cli("next")["action"]["kind"], "repair_evidence")
 
     def test_human_case_requires_reason_and_batch(self):
         self.manual()

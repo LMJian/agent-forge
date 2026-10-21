@@ -110,6 +110,7 @@ checkpoints describe previous increments; final checks validate their combined r
 run-check unit
 run-check unit --module storage
 run-adapter push --authorization <existing-user-authorization>
+authorize-branch --module storage --actor user --note '<actual prior user approval>'
 prepare-module storage
 attach-worktree storage --path <actual-host-worktree>
 merge-wave
@@ -119,6 +120,9 @@ Read [host integration](../../../references/hosts.md) for provider selection. Bo
 native command execution return measured results bound to task, stage epoch, module, code
 fingerprint, command configuration and logs. No command accepts a model-supplied exit code.
 Checks that change tested bytes fail. Native bridge transport logs are retained separately.
+Default development stays on the current branch/checkout. Read [branch consent](../../../references/branch-consent.md)
+before any separate development branch/worktree; record real authorization before `prepare-module`
+or external Git/host creation, never after the mutation. Checkout mode does not need branch consent.
 
 Single-module checkout execution supports dirty working trees. Isolated worktrees require a
 clean wave base and committed implementation for merging. Final local review/integration may

@@ -44,6 +44,8 @@ def prepare(workflow: Workflow, module: str) -> dict:
         if item.get("worktree"):
             require(module_path(workflow, item).is_dir(), "Worktree missing")
             return item
+        from .branches import require_approval
+        require_approval(state, module=module)
         require(vcs.clean(workflow.root), "The owning branch must be clean before preparing a wave")
         base = state.setdefault("wave_bases", {}).setdefault(str(state["wave_index"]), vcs.head(workflow.root))
         require(vcs.head(workflow.root) == base, "Owning branch moved while preparing this wave")
@@ -75,6 +77,8 @@ def attach(workflow: Workflow, module: str, path: str) -> dict:
         require(module in executing(workflow, state), "Module is not in the current wave")
         item = state["modules"][module]
         require(item["status"] == "awaiting_host" and item["provider"] == "native", "No native worktree request")
+        from .branches import require_approval
+        require_approval(state, module=module)
         proposed = {**item, "worktree": str(Path(path).resolve()), "branch": vcs.branch(Path(path))}
         location = module_path(workflow, proposed)
         require(vcs.head(location) == item["base"] and vcs.clean(location),

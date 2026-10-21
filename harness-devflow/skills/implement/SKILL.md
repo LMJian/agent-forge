@@ -28,7 +28,9 @@ commands always point to the owning repository and task ID.
    not additional human approval gates.
 4. In **autonomous** mode, related tasks may be implemented together. Checkpoints remain
    available; final task coverage and module checks are still required.
-5. Run all configured review checks for the final module code. In checkout mode, uncommitted
+5. Inspect `verify-plan --module MODULE`, then run `verify --module MODULE` for the final code.
+   The critical path runs first; unchanged deterministic checks may reuse their real receipts.
+   In checkout mode, uncommitted
    implementation can be verified locally. In worktree mode, commit module changes first so
    the core can integrate the exact verified commit. Do not include unrelated user work in a commit.
 6. Write a result body containing `status`, `summary`, `completed_tasks`, `acceptance`, `artifacts`

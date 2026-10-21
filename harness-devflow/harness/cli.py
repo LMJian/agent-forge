@@ -80,6 +80,8 @@ def parser() -> argparse.ArgumentParser:
     verify = commands.add_parser("verify", help="Run the selected checks once; reuse only explicit deterministic evidence")
     verify.add_argument("--module")
     verify.add_argument("--fresh", action="store_true", help="Execute all commands without evidence reuse")
+    preview = commands.add_parser("verify-plan", help="Read check order, prior timings and eligible reuse without running checks")
+    preview.add_argument("--module")
     commands.add_parser("test-progress", help="Read remaining cases, human batches and exclusions")
     case = commands.add_parser("record-case", help="Record actual acceptance evidence or an explicit user waiver")
     case.add_argument("--result", required=True)
@@ -123,6 +125,12 @@ def parser() -> argparse.ArgumentParser:
     attach = commands.add_parser("attach-worktree", help="Validate and attach a requested host worktree")
     attach.add_argument("module")
     attach.add_argument("--path", required=True)
+    branch = commands.add_parser("authorize-branch", help="Record actual user consent; does not create or switch a branch")
+    choice = branch.add_mutually_exclusive_group(required=True)
+    choice.add_argument("--module", help="Planned module worktree, scoped to its current implementation epoch")
+    choice.add_argument("--branch", help="Exact branch name, approved before an external checkout/switch")
+    branch.add_argument("--actor", choices=["user"], required=True)
+    branch.add_argument("--note", required=True, help="Quote the actual user decision")
     approve = commands.add_parser("approve")
     approve.add_argument("stage", choices=sorted(GATES))
     approve.add_argument("--actor", required=True)
@@ -275,6 +283,12 @@ def execute(args: argparse.Namespace) -> dict:
         return worktrees.checkpoint(w, args.module, args.step, args.summary, args.check, args.artifact)
     if cmd == "attach-worktree":
         return worktrees.attach(w, args.module, args.path)
+    if cmd == "authorize-branch":
+        from .branches import authorize
+        return authorize(w, actor=args.actor, note=args.note, module=args.module, branch=args.branch)
+    if cmd == "verify-plan":
+        from .verification import plan
+        return plan(w, module=args.module)
     if cmd == "approve":
         return w.approve(args.stage, args.actor, args.note)
     if cmd in {"skip", "fail", "reopen"}:

@@ -89,6 +89,49 @@ def validate_intake(workflow, state, details, artifacts):
             identifier(case.get("batch"))
     require(covered == set(details["acceptance"]), "Scenarios must cover every acceptance criterion")
     require(product == covered, "Every acceptance criterion needs product-level evidence; unit/build checks alone are insufficient")
+    validate_journey(state, details, scenarios)
+
+
+def validate_journey(state, details, scenarios):
+    """Pin the actual user entry and final side effect, not just a 'product' label."""
+    journey = details.get("journey")
+    require(isinstance(journey, dict), "Codex intake requires a journey from user entry to terminal outcome")
+    for key in ("entry", "terminal_outcome"):
+        nonempty(journey.get(key), f"journey.{key}")
+    steps = journey.get("steps")
+    require(isinstance(steps, list) and steps, "journey.steps must describe observable outcomes")
+    by_id, covered = {}, set()
+    for step in steps:
+        require(isinstance(step, dict), "Journey step must be an object")
+        sid = identifier(step.get("id"))
+        require(sid not in by_id, "Duplicate journey step")
+        nonempty(step.get("outcome"), "journey step.outcome")
+        require(step.get("proof") in {"artifact", "runtime"}, "Journey steps need artifact or runtime evidence")
+        claims = strings(step.get("acceptance"), "journey step.acceptance")
+        require(set(claims) <= set(details["acceptance"]), "Journey step claims unknown acceptance")
+        covered.update(claims)
+        by_id[sid] = step
+    require(covered == set(details["acceptance"]), "Journey must include every accepted outcome")
+    witnessed = set()
+    for case in scenarios:
+        if case["level"] != "product":
+            continue
+        proof = case.get("proof")
+        require(proof in {"artifact", "runtime"}, "Product scenarios need artifact or runtime proof, not unit/build labels")
+        nonempty(case.get("oracle"), "scenario.oracle (independent expected result and its source)")
+        ids = strings(case.get("steps"), "scenario.steps")
+        require(set(ids) <= set(by_id), "Scenario covers an unknown journey step")
+        if case["executor"] == "command":
+            require(state["config"]["checks"][case["check"]].get("proof") == proof,
+                    "Scenario proof must match its configured check boundary; compilation/replay cannot stand in for runtime")
+        claims = set()
+        for sid in ids:
+            step = by_id[sid]
+            require(step["proof"] == proof, "Artifact replay cannot prove a runtime journey step")
+            claims.update(step["acceptance"])
+        require(set(case["acceptance"]) <= claims, "Scenario acceptance must match the steps it actually observes")
+        witnessed.update(ids)
+    require(witnessed == set(by_id), "Journey has untested steps; keep runtime/permission gaps pending instead of removing them")
 
 
 def valid_check(workflow, state, run_id, name=None):
@@ -166,7 +209,9 @@ def record_body(workflow, body):
         case = next((c for c in cases(workflow, state) if c["id"] == body.get("case")), None)
         require(case, "Unknown case in the current Codex intake")
         from .engine import current
-        require(current(state) in {"implement", "review", "integration"}, "Record cases during implementation or verification")
+        require(current(state) in {"implement", "review", "integration"} or
+                (current(state) is None and body.get("status") in {"failed", "blocked"}),
+                "Record cases during implementation or verification (post-delivery failures remain recordable)")
         status = body.get("status")
         require(status in {"passed", "failed", "blocked", "waived"}, "Invalid case status")
         nonempty(body.get("summary"), "case result.summary")

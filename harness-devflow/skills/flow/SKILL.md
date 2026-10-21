@@ -14,7 +14,11 @@ a second workflow over an active task just because a similarly named skill is av
 ## Start or continue
 
 1. Read applicable project instructions. Establish the actual goal, acceptance scope, repository
-   and task ID. Keep the selected model and host permissions.
+   and task ID. Keep the selected model and host permissions. Default to development on the
+   current branch (`isolation=checkout`). Creating/switching a development branch, naming a
+   detached checkout, or using a separate worktree requires the user's explicit request or consent.
+   Dirty files, a branch prefix, autonomy or a workflow profile are not authorization. Do not use
+   raw Git or host tools to bypass this rule; see [branch consent](../../references/branch-consent.md).
 2. Default new projects to `profile=codex`, `assistance=autonomous`, `target=local`.
    Follow [the Codex contract](../../references/codex-workflow.md): one decision packet, continuous
    implementation, product verification. Read it before intake. Existing task choices and explicit
@@ -65,7 +69,8 @@ The returned Skill may be loaded by the host or read as Markdown directly. The p
 
 ## Verification efficiency
 
-Use `verify` for the selected check batch. Use `test-progress` before asking for any human
+Use `verify-plan` to inspect order, cost and safe reuse, then `verify` for the selected check batch.
+Run the smallest real critical-path/regression check before expensive broad checks. Use `test-progress` before asking for any human
 operation or reporting completion. Keep automation, authorized agent actions and unavoidable human
 work distinct. Report remaining cases and human batches, not just how many unit tests passed.
 See the [Codex contract](../../references/codex-workflow.md) for evidence reuse and failure recovery.

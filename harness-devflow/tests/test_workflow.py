@@ -113,7 +113,13 @@ class RepoCase(unittest.TestCase):
         atomic_json(path, {m["id"]: [{"id": "build", "summary": "Implement the module's capability",
                                     "acceptance": m["acceptance"], "verification": "Run tests for the observable result"}]
                            for m in modules})
-        return self.flow.plan(str(path))
+        result = self.flow.plan(str(path))
+        if self.flow.load()["execution_mode"] == "worktree":
+            from harness.branches import authorize
+            for module in modules:
+                authorize(self.flow, module=module["id"], actor="user",
+                          note="Disposable test fixture user explicitly approves this module worktree")
+        return result
 
     def implement_module(self, mid="core", fail=False):
         info = worktrees.prepare(self.flow, mid)
