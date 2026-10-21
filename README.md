@@ -33,7 +33,8 @@ git clone https://github.com/LMJian/agent-forge.git
 
 ## harness-devflow：Codex 精简研发流程
 
-运行时依赖 **Python 3.10+ 与 Git**，默认 `profile=codex`、`assistance=autonomous`、`target=local`。
+运行时依赖 **Python 3.10+ 与 Git**，默认 `profile=codex`、`assistance=autonomous`、`target=local`、`isolation=checkout`。
+默认保持当前分支开发；新建／切换开发分支或另开 worktree，必须先有用户明确请求或同意。
 
 1. 需求与可行性：一份决策包合并需求、架构、关键风险实验、测试和任务。
 2. 连续实现：自动计算计划，Codex 持续实现及修复。
@@ -41,7 +42,8 @@ git clone https://github.com/LMJian/agent-forge.git
 
 内部四个状态中，`plan` 从已接受的决策包生成；要求设计确认时仍保留具体审批。
 未证明的关键技术假设阻止正式开发；单元测试或编译成功不能冒充产品验收。
-`verify` 批量运行检查并在明确确定性前提下复用证据，`test-progress` 显示剩余用例和人工批次。
+`verify-plan` 显示关键路径优先的检查顺序、历史耗时与复用机会；`verify` 执行并在明确确定性前提下复用证据。
+验收按用户入口到最终结果逐步映射，文件回放不能冒充运行时行为；`test-progress` 显示剩余用例和人工批次。
 
 旧任务保留原先的 `light`/`standard`/`release`、引导执行和审批要求。
 交付终点仍包括 `local`、`pushed`、`pr`、`merged`、`deployed`；对外动作不因流程配置自动获得授权。

@@ -8,6 +8,13 @@
 - Direct CLI/API/connector requests, web search, and reading local files or supplied images do not by themselves require Computer Use approval; their own access permissions and action boundaries still apply.
 - Prefer a CLI, API, connector, MCP tool, or purpose-built skill when it can complete the task without GUI interaction.
 
+## Development branch authorization — mandatory
+
+- Default to developing on the current branch in the current checkout. Do not automatically create or switch development branches.
+- Creating or switching a development branch, checking out a detached revision for development, naming a detached checkout, or creating/using another development worktree requires my explicit request or agreement before the action.
+- A general implementation request, autonomous mode, branch naming conventions, existing dirty files, design approval, or a tool's preference for isolation is not branch-switch authorization. Preserve existing work and continue on the current branch when possible.
+- Reuse explicit consent only for the agreed task, target and purpose. Read-only inspection of another ref does not require switching. Branches inside disposable test-fixture repositories are test data, not development branches.
+
 ## Token-efficient execution
 
 - Start with the narrowest reliable query or read. Expand scope only when the available evidence is insufficient to complete the task correctly.
