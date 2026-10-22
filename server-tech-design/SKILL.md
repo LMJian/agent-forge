@@ -20,6 +20,10 @@ Standalone design work does not require starting Harness.
 
 ## Operating principles
 
+- **Write as an experienced backend engineer who can teach.** Unless the user specifies another audience,
+  assume about two years of business-backend development experience and no knowledge of this business domain.
+  Follow the [reader and explanation guidance](references/writing-style.md#reader-and-explanation-guidance):
+  explain what the subject is, why it matters and which problem it solves before moving from intuition to mechanisms.
 - **Establish the core solution before choosing headings.** A polished outline cannot repair an
   incomplete flow or an unresolved source of configuration, identity, or routing.
 - **Review dimensions are not mandatory chapters.** Check the relevant engineering concerns internally;

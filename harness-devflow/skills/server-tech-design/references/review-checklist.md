@@ -7,6 +7,7 @@ checklist or a sequence of “not applicable” explanations into the document u
 ## Can the reader explain the solution?
 
 - [ ] The opening explains the current problem, intended change, outcome, and scope.
+- [ ] A backend engineer with about two years of experience but no project-domain knowledge can follow the explanation: necessary business context and terms are introduced before mechanisms and details, unless the user specified a different audience.
 - [ ] A reader can restate the core solution and the important decisions without tracing implementation details.
 - [ ] One concrete example goes from input to result; relevant lifecycle transitions and failure outcomes are clear.
 - [ ] Input sources, state ownership, identity or version selection, and their effects are established where relevant.
@@ -38,6 +39,7 @@ checklist or a sequence of “not applicable” explanations into the document u
 - [ ] Essential behavior is in the main text; long implementation inventories do not obscure it.
 - [ ] Every paragraph helps explain the solution, justify a decision, or assess a consequential constraint; remaining repetition is removed.
 - [ ] Tables and diagrams simplify rather than duplicate text, and important labels remain readable in the actual output.
+- [ ] Code examples are minimal and preserve important conditions; useful visual examples are actually supplied or their rendering gap is explicit. Neither examples nor teaching detail expand the requested scope.
 - [ ] Each definition or field reference has one primary home; annotated schemas and examples do not duplicate a second full reference.
 - [ ] After changes, affected examples, diagrams, cross-references, headings, and obsolete explanations have been reconciled.
 - [ ] The final affected content has been read back; user annotations and unrelated content are preserved.
