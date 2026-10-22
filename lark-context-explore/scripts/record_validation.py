@@ -53,6 +53,8 @@ def validate_details(run, evidence):
         return errors
 
     need(run.get("budget_policy") in ("default", "user_hard"), "invalid budget policy")
+    need(run.get("recording_mode", "audit") in ("light", "audit"), "invalid recording mode")
+    need(run.get("coverage_scope", "targeted") in ("full", "targeted"), "invalid coverage scope")
     need(isinstance(run.get("clock"), dict), "clock record required")
     current_time = datetime.now(timezone.utc)
     end = None
@@ -83,7 +85,7 @@ def validate_details(run, evidence):
         need(bool(q.get("id")) and bool(q.get("text")), "question ID/text required")
         need(q.get("status") in ("answered", "partial", "unanswered"), "invalid question status")
         need(q.get("time_scope", "current") in ("current", "historical"), "invalid question time scope")
-        need(set(q.get("requires", [])) <= {"document", "code", "runtime"}, "invalid question evidence tier")
+        need(set(q.get("requires", [])) <= {"document", "message", "meeting", "code", "runtime"}, "invalid question evidence tier")
         need(all(c in claims for c in q.get("claim_ids", [])), "question references missing claim")
         need(q.get("status") == "answered" or bool(q.get("gaps")), "partial/unanswered question needs gaps")
         if q.get("status") == "answered":
@@ -111,6 +113,9 @@ def validate_details(run, evidence):
             probe = calls.get(c.get("probe_call_id"), {})
             need(probe.get("is_probe") and not probe.get("is_discovery") and probe.get("outcome") == "success" and
                  probe.get("context_key") == c.get("context_key"), "call needs successful probe in same execution context")
+            from workflow import write_kind
+            if c.get("probe_scope") and not write_kind(c.get("argv", [])):
+                need(probe.get("argv", [])[1:2] == c.get("argv", [])[1:2], "read requires a probe in the same domain")
             if time_ok(probe.get("finished_at")) and time_ok(c.get("started_at")):
                 need(stamp(c["started_at"]) >= stamp(probe["finished_at"]), "call began before probe completed")
         if c.get("outcome") != "pending":
@@ -300,11 +305,14 @@ def check_files(root, run, evidence):
 
 def assess(root, run, evidence, validator):
     from check_artifacts import active_seconds, budget_status
+    from workflow import collection_coverage, delivery_checks
     record_errors = validator(run, evidence)
     file_errors, diagrams = check_files(root, run, evidence)
     seconds = active_seconds(run)
     budget = {p: budget_status(run, p) for p in ("collection", "delivery")}
     matrix = coverage(run, evidence)
+    domains = collection_coverage(run)
+    record_errors.extend(domains["errors"])
     pending = [c.get("id") for c in run["calls"] if c.get("outcome") == "pending"]
     warnings = []
     if run.get("schema_version") == 1:
@@ -316,6 +324,9 @@ def assess(root, run, evidence, validator):
     unresolved = [k for k, v in run["operations"].items() if v and v[-1]["status"] in ("inflight", "unknown", "submitted")]
     suffixes = {Path(a.get("path", "")).suffix for a in run.get("artifacts", {}).values()}
     missing = []
+    if (root / ".ledger-transaction.json").exists():
+        missing.append("pending local batch transaction; resume through run_state before checking")
+    missing.extend(delivery_checks(root, run))
     if ".md" not in suffixes:
         missing.append("local Markdown report")
     if run["delivery"]["html"] and ".html" not in suffixes:
@@ -330,9 +341,10 @@ def assess(root, run, evidence, validator):
     overrun = [p for p in counts if counts[p] > run["limits"][p]["calls"] or totals[p] > run["limits"][p]["seconds"]]
     return {"record_valid": not record_errors, "artifacts_valid": not file_errors,
             "budget_status": budget, "active_seconds": seconds, "question_coverage": matrix,
+            "collection_coverage": domains,
             "budget_compliant": not overrun, "budget_overrun_phases": overrun,
             "call_counts": {"reserved": len(run["calls"]), "sealed": len(run["calls"]) - len(pending), "pending": len(pending)},
-            "delivery_complete": not (missing or record_errors or file_errors or pending or unresolved) and matrix["complete"] and all(d["status"] == "passed" for d in diagrams),
+            "delivery_complete": not (missing or record_errors or file_errors or pending or unresolved) and matrix["complete"] and domains["complete"] and all(d["status"] == "passed" for d in diagrams),
             "delivery_missing": missing,
             "record_errors": record_errors, "artifact_errors": file_errors, "diagrams": diagrams,
             "pending_calls": pending, "unresolved_operations": unresolved, "warnings": warnings,

@@ -1,0 +1,81 @@
+[
+  {
+    "id": "chat-only",
+    "prompt": "只读整理 Atlas 群里的决策背景。只给群名，没有文档链接，保存本地背景包。",
+    "read_only": true,
+    "seed_domain": "im",
+    "max_calls": 4,
+    "sources": [
+      {"id": "msg-1", "kind": "message", "text": "2026-10-01 09:00+08:00 林：A 和 B 都是备选，A 的迁移成本更高。"},
+      {"id": "msg-2", "kind": "message", "text": "2026-10-02 10:00+08:00 周：评审决定采用 B，原因是迁移成本较低。尚未部署。"}
+    ],
+    "expected_facts": [
+      {"key": "selected-B", "terms": ["B", "迁移成本"], "status": "decided", "current": true, "source_ids": ["msg-2"]}
+    ],
+    "report_required": ["B", "msg-2", "未部署"],
+    "report_forbidden": ["B 已上线"]
+  },
+  {
+    "id": "replacement-and-prehistory",
+    "prompt": "只读整理 Atlas 的完整背景，包含定名前的讨论、决策变化和当前状态。",
+    "read_only": true,
+    "max_calls": 8,
+    "sources": [
+      {"id": "old-chat", "kind": "message", "text": "2026-09-20 项目尚未命名。业务方需要降低迁移成本。"},
+      {"id": "decision-A", "kind": "document", "text": "2026-10-01 评审决定采用 A。"},
+      {"id": "decision-B", "kind": "message", "text": "2026-10-10 正式决定以 B 替代 A，降低迁移成本。无部署回执。"}
+    ],
+    "expected_facts": [
+      {"key": "old-A", "terms": ["A"], "status": "decided", "current": false, "source_ids": ["decision-A"]},
+      {"key": "current-B", "terms": ["B", "替代"], "status": "decided", "current": true, "source_ids": ["decision-B"]},
+      {"key": "prehistory", "terms": ["命名", "迁移成本"], "status": "unknown", "current": true, "source_ids": ["old-chat"]}
+    ],
+    "report_required": ["定名前", "decision-B", "未验证"],
+    "report_forbidden": ["B 已上线"]
+  },
+  {
+    "id": "new-draft-is-not-decision",
+    "prompt": "只读核对 Atlas 当前采用什么方案，解释两份文档的分歧。",
+    "read_only": true,
+    "max_calls": 5,
+    "sources": [
+      {"id": "approved-A", "kind": "document", "text": "2026-10-01 审批通过，当前决定采用 A。"},
+      {"id": "draft-B", "kind": "document", "text": "2026-10-10 草稿建议改用 B，尚未审批，不替代已有决定。"}
+    ],
+    "expected_facts": [
+      {"key": "A-still-current", "terms": ["A"], "status": "decided", "current": true, "source_ids": ["approved-A"]},
+      {"key": "B-only-proposed", "terms": ["B"], "status": "proposed", "current": true, "source_ids": ["draft-B"]}
+    ],
+    "expected_conflicts": [["approved-A", "draft-B"]],
+    "report_required": ["待确认", "draft-B"],
+    "report_forbidden": ["已决定采用 B"]
+  },
+  {
+    "id": "low-yield-stop",
+    "prompt": "只读补充 Atlas 决策原因。连续两轮材料均为同一结论的转述，且没有具体新线索。",
+    "read_only": true,
+    "max_calls": 4,
+    "sources": [
+      {"id": "summary-1", "kind": "document", "text": "摘要转述评审选择 B，没有给出原因。"},
+      {"id": "summary-2", "kind": "document", "text": "另一份摘要同样转述选择 B，没有新增原始证据。"}
+    ],
+    "expected_facts": [],
+    "stop_reason": "no_evidence_gain",
+    "report_required": ["原因未确认"],
+    "report_forbidden": []
+  },
+  {
+    "id": "uncertain-create",
+    "prompt": "已授权创建背景包文档。首次 create 超时且没有 token，按唯一标题搜索为空。保留本地文件并汇报。",
+    "read_only": false,
+    "max_calls": 3,
+    "max_creates": 1,
+    "sources": [
+      {"id": "create-timeout", "kind": "receipt", "text": "docs +create: connection timed out; no token received"},
+      {"id": "search-empty", "kind": "receipt", "text": "docs +search: ok=true, items=[]"}
+    ],
+    "expected_facts": [],
+    "report_required": ["结果未确认", "background.md"],
+    "report_forbidden": ["文档创建失败且未写入", "文档已创建"]
+  }
+]

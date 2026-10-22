@@ -15,6 +15,7 @@ import uuid
 
 from check_artifacts import active_seconds, budget_status, stamp
 from record_validation import context_key, digest, local_path
+from workflow import apply_updates, operation, probe_allowed, probe_key, write_kind
 
 
 def now():
@@ -31,6 +32,13 @@ def save(path, value):
 def ledger(root):
     with (root / ".ledger.lock").open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
+        # Roll forward a locally committed batch if interrupted between the two JSON replacements.
+        journal = root / ".ledger-transaction.json"
+        if journal.exists():
+            transaction = json.loads(journal.read_text())
+            save(root / "evidence.json", transaction["evidence"])
+            save(root / "run.json", transaction["run"])
+            journal.unlink()
         run = json.loads((root / "run.json").read_text())
         if run.get("schema_version") != 2:
             raise ValueError("v1 is read-only legacy; start a new v2 directory, do not invent old receipts")
@@ -96,10 +104,28 @@ def prepare(root, run, request, probe=False):
     if not all(isinstance(ctx.get(k), str) and ctx[k] for k in ("runner", "sandbox", "identity")) or ctx["identity"] != "user":
         raise ValueError("execution_context needs runner, sandbox, identity=user")
     key = context_key(ctx)
+    scope_key = probe_key(key, argv)
     if any(c["context_key"] == key and c.get("is_probe") and c["outcome"] == "pending" for c in run["calls"]):
         raise ValueError("wait for the single probe before parallel calls")
-    if not probe and not run["probes"].get(key, {}).get("verified"):
-        raise ValueError("new/unverified execution context: reserve one probe first")
+    verified = run["probes"].get(scope_key, {})
+    kind = write_kind(argv)
+    if kind:
+        allowed = run["delivery"]["document"] if kind == "document" else run["delivery"]["publish"]
+        attempts = run["operations"][kind]
+        if probe or phase != "delivery" or not allowed or run["delivery"]["read_only"] or not attempts or attempts[-1]["status"] != "inflight":
+            raise ValueError("write needs authorized delivery and a bound inflight operation")
+        if kind in ("document", "publish"):
+            item = attempts[-1]
+            artifact = run["artifacts"][item["content_artifact"]]
+            option, expected = ("--content", "@" + artifact["path"]) if kind == "document" else ("--path", artifact["path"])
+            if option not in argv or argv[argv.index(option) + 1:][:1] != [expected] or digest(local_path(root, artifact["path"])) != item["content_sha256"]:
+                raise ValueError("write argv/file does not match bound input artifact")
+        if any(c.get("operation_request_tag") == attempts[-1]["request_tag"] for c in run["calls"]):
+            raise ValueError("write already reserved; record/reconcile its result instead of repeating")
+        if not verified.get("verified"):
+            verified = next((v for k, v in run["probes"].items() if k.startswith(key + ":") and v.get("verified")), {})
+    if not probe and not verified.get("verified"):
+        raise ValueError("new/unverified execution context or domain: reserve one probe first")
     qids = request.get("question_ids", [])
     known = {q["id"] for q in run["questions"]}
     if (not probe and not qids) or any(q not in known for q in qids):
@@ -108,22 +134,19 @@ def prepare(root, run, request, probe=False):
         raise ValueError("full document read requires full_read_reason; prefer section/keyword")
     if "docs" in argv and "+fetch" in argv and "--scope" not in argv:
         raise ValueError("explicit docs fetch scope required")
-    discovery = probe and argv[1:3] == ["docs", "+search"]
-    if discovery:
-        if not request.get("discovery_reason") or "--page-all" in argv or any(
-                c.get("is_discovery") and c["context_key"] == key for c in run["calls"]):
-            raise ValueError("only one bounded discovery is allowed per context; reason required")
-    elif probe and not (argv[1:3] == ["docs", "+fetch"] and "--scope" in argv and
-                        argv[argv.index("--scope") + 1:][:1] == ["outline"]):
-        raise ValueError("probe must be one docs +fetch --scope outline request")
+    if probe and not probe_allowed(argv):
+        raise ValueError("probe must be one bounded supported read in the seed's domain")
     cid = "call-" + uuid.uuid4().hex[:16]
     folder = root / "calls" / cid
     folder.mkdir(parents=True)
     call = {"id": cid, "phase": phase, "argv": argv, "command": json.dumps(argv, ensure_ascii=False),
-            "execution_context": ctx, "context_key": key, "is_probe": probe, "is_discovery": discovery,
+            "execution_context": ctx, "context_key": key, "probe_scope": argv[1],
+            "is_probe": probe, "is_discovery": False,
             "discovery_reason": request.get("discovery_reason"), "question_ids": qids,
-            "probe_call_id": None if probe else run["probes"][key]["call_id"],
+            "probe_call_id": None if probe else verified["call_id"],
             "started_at": now(), "outcome": "pending", "full_read_reason": request.get("full_read_reason")}
+    if kind:
+        call["operation_request_tag"] = run["operations"][kind][-1]["request_tag"]
     run["calls"].append(call)
     return {"call_id": cid, "argv": argv, "capture_stdout": f"calls/{cid}/stdout.capture",
             "capture_stderr": f"calls/{cid}/stderr.capture", "instruction": "Execute natively using the recorded context; this tool has executed nothing."}
@@ -176,8 +199,16 @@ def finish(root, run, cid, stdout, stderr, exit_code):
         call[stream] = {"path": str(destination.relative_to(root)), "sha256": digest(destination), "bytes": destination.stat().st_size}
     call.update(finished_at=now(), exit_code=exit_code, outcome="success" if success else "failed")
     lost_context = not success and context_failed(response, raw, stderr_raw)
-    if call["is_probe"] or lost_context:
-        run["probes"][call["context_key"]] = {"verified": success and not call.get("is_discovery"), "call_id": cid, "at": call["finished_at"]}
+    if lost_context:
+        run.setdefault("context_failures", {})[call["context_key"]] = call["finished_at"]
+        for key, value in run["probes"].items():
+            if key == call["context_key"] or key.startswith(call["context_key"] + ":"):
+                value["verified"] = False
+    if call["is_probe"]:
+        last_failure = run.get("context_failures", {}).get(call["context_key"])
+        run["probes"][probe_key(call["context_key"], call["argv"])] = {
+            "verified": success and (not last_failure or stamp(call["started_at"]) > stamp(last_failure)),
+            "call_id": cid, "at": call["finished_at"]}
     data = response.get("data")
     doc = data.get("document") if isinstance(data, dict) else None
     doc = doc if isinstance(doc, dict) else {}
@@ -250,7 +281,7 @@ def excerpt(root, filename, terms, cap=6000, max_hits=8):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=["clock", "budget", "questions", "prepare", "finish", "source", "repository", "artifact", "mermaid", "excerpt", "status"])
+    parser.add_argument("action", choices=["clock", "budget", "questions", "prepare", "finish", "source", "repository", "artifact", "mermaid", "excerpt", "status", "update", "operation"])
     parser.add_argument("directory", type=Path)
     parser.add_argument("--file", type=Path)
     parser.add_argument("--phase", choices=["collection", "delivery"])
@@ -270,6 +301,7 @@ def main():
     parser.add_argument("--mermaid-module", type=Path)
     parser.add_argument("--keyword", action="append")
     parser.add_argument("--max-chars", type=int, default=6000)
+    parser.add_argument("--update-file", type=Path, help="Batch source/claim/question/coverage updates with finish")
     args = parser.parse_args()
     root = args.directory.resolve()
     try:
@@ -299,6 +331,21 @@ def main():
                     if args.exit_code is None:
                         raise ValueError("finish requires actual exit code")
                     result = finish(root, run, args.call_id, args.stdout, args.stderr, args.exit_code)
+                    # Always commit the actual receipt even if a later optional update is invalid.
+                    save(root / "run.json", run)
+                    if args.update_file:
+                        evidence = json.loads((root / "evidence.json").read_text())
+                        data = json.loads(args.update_file.read_text())
+                        for entry in data.get("sources", []):
+                            entry.setdefault("call_id", args.call_id)
+                        result["updates"] = apply_updates(run, evidence, data)
+                        commit_updates(root, run, evidence)
+                elif args.action == "update":
+                    evidence = json.loads((root / "evidence.json").read_text())
+                    result = apply_updates(run, evidence, json.loads(args.file.read_text()))
+                    commit_updates(root, run, evidence)
+                elif args.action == "operation":
+                    result = operation(root, run, json.loads(args.file.read_text()))
                 elif args.action == "source":
                     if not all((args.id, args.locator, args.scope)):
                         raise ValueError("source needs ID, locator and actual read scope")
@@ -339,6 +386,13 @@ def main():
         print(json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False), file=sys.stderr)
         return 1
     return 0
+
+
+def commit_updates(root, run, evidence):
+    save(root / ".ledger-transaction.json", {"run": run, "evidence": evidence})
+    save(root / "evidence.json", evidence)
+    save(root / "run.json", run)
+    (root / ".ledger-transaction.json").unlink()
 
 
 if __name__ == "__main__":

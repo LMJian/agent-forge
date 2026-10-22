@@ -1,6 +1,6 @@
 # 本次任务的事实与断点记录
 
-记录留在任务产物目录，不写入 Skill 或持久记忆。主 agent 合并事实；本地 CLI 用文件锁串行更新 run.json。状态只是证据，不是授权来源。示例路径、token、问题和执行环境必须替换为本次真实值。
+复杂调查和恢复时读取本页；日常按轮记账使用 [轻量入口](quickstart.md)。记录留在任务产物目录，不写入 Skill 或持久记忆。主 agent 合并事实；本地 CLI 用文件锁与事务日志更新 run.json/evidence.json。状态只是证据，不是授权来源。示例路径、token、问题和执行环境必须替换为本次真实值。
 
 ## 初始化、计划与时钟
 
@@ -18,7 +18,7 @@ python3 <技能目录>/scripts/run_state.py clock <任务目录> --clock-action 
 [{"id":"q1","text":"核心模块和职责是什么？","requires":["document","code"],"status":"unanswered","claim_ids":[],"gaps":["尚未读方案和对应实现"]}]
 ```
 
-requires 可为空（普通消息/会议背景），或选择 document/code/runtime。不要给普通背景任务机械添加代码或线上要求。status 为 answered/partial/unanswered，后两者要写具体 gaps；answered 需关联 claims。time_scope 默认 current；历史取舍问题可用 historical，允许引用已被替代的历史事实。即使 requires 为空，完整覆盖仍须至少一条适用于该时间范围、且有可读来源支撑的 claim；question_coverage 中的 supported_claim_ids 列出这些 claim。用 questions 命令更新时保留已被调用引用的问题 ID。
+requires 可为空，或按问题选择 document/message/meeting/code/runtime。不要给普通背景任务机械添加文档、代码或线上要求。status 为 answered/partial/unanswered，后两者要写具体 gaps；answered 需关联 claims。time_scope 默认 current；历史取舍问题可用 historical。即使 requires 为空，也须至少一条适用且有可读来源支撑的 claim。用 questions 或 update 更新时保留已被调用引用的问题 ID。
 
 默认 collection 40 次/600 秒，delivery 15 次/300 秒，total 55 次/900 秒。复杂任务可在第一条调用前一次性设定计划；此后增额必须有用户明确指令。预算文件示例：
 
@@ -46,13 +46,13 @@ python3 <技能目录>/scripts/run_state.py status <任务目录>
 {"phase":"collection","argv":["lark-cli","docs","+fetch","--doc","实际TOKEN","--scope","outline","--as","user"],"execution_context":{"runner":"exec_command/native-shell","sandbox":"use_default","identity":"user"},"question_ids":["q1"]}
 ```
 
-1. run_state.py prepare <任务目录> --file <request.json> --probe 预留唯一一次 outline 探测。普通查询不带 --probe，但必须引用已有 question_ids。全文查询另写 full_read_reason。
+1. run_state.py prepare <任务目录> --file <request.json> --probe 预留跟随种子的最小只读探测；群/消息/会议不依赖文档，切换接口域重新单次探测。普通查询不带 --probe，但必须引用已有 question_ids。全文查询另写 full_read_reason。
 2. prepare 返回 call_id、capture_stdout、capture_stderr；它不会执行 argv。在记录的环境里直接执行原生 lark-cli，将两个流重定向到这两个独立文件。实际 argv 必须与记录一致，保存真实退出码。不要用 Python subprocess 包装批量 Lark 请求，也不要把 JSON 字符串当 shell 转义。
 3. 返回后立刻运行 run_state.py finish <任务目录> --call-id <ID> --stdout calls/<ID>/stdout.capture --stderr calls/<ID>/stderr.capture --exit-code <真实退出码>。原样封存 .raw 和 SHA-256，只输出身份、revision、长度等摘要；失败正文同样保留。工具响应到 finish 的间隔应尽量短，finished_at 是本地封存时间，不是服务端事件时间。
 4. 探测须 exit=0 且响应 ok=true、identity=user。更换 sandbox（含提权）、runner 或 profile 后重新单次探测。Keychain、401/凭证失效、连接拒绝/重置、DNS 或超时等错误使环境失效，先诊断或按会话规则申请所需授权，再成功完成一次新探测后恢复普通查询。对象级 403 单独记缺口。
 5. 独立查询逐个 prepare，文件锁内 pending 即占额度；仅执行预留成功的项。每个 finish 只封存一次；重试重新 prepare，原失败文件不可覆盖。中断遗留 pending 保持未确认并占额度，先对账实际命令是否发出，不静默删除。
 
-没有文档 token 时，可先在同一原生环境做一次最小发现查询。用 prepare --probe 记录 docs +search 并写 discovery_reason；只允许单次发现，尚未视为 outline 探测成功。获得 token 后完成标准探测再展开。不要伪造 token 或把搜索伪标成 outline。
+没有文档 token 时直接使用种子所在域的最小查询；docs +search 成功可以验证文档域，空结果仍不证明对象不存在。不要伪造 token 或把搜索当作已读正文。新域单次探测只读受支持入口；同环境授权的首次远端创建可复用已有只读探测，但需先绑定 inflight 操作，不能拿写入探测权限。
 
 只对成功调用登记可读来源：
 
@@ -76,7 +76,7 @@ evidence.json 含 schema_version=2、sources、claims。关键事实示例：
 - 不可读来源 access 为 forbidden/missing_scope/not_found/unsupported，记录失败 call_id、缓存、检查时间与范围，不支撑已知事实。readable 必须对应成功回执。
 - 新决定明确替代旧决定时旧 claim current=false，新 claim supersedes 指向旧 ID。冲突用双向 conflicts_with；更新时间较新不等于替代。推断用 inference=true。
 - rounds 记 branch/new_claim_ids/resolved_questions/new_conflicts；pending_leads 不能绕过预算。coverage 记域、分页与时间范围的跳过原因。
-- 编辑事实/问题时先写同目录临时 JSON、解析通过再原子替换，不与记账操作并行写 run.json。只存相关原始响应，不混入无关个人信息或凭据。
+- 优先用 update 一次登记来源、事实、问题、覆盖和轮次；finish --update-file 可合并本次来源登记。脚本先验证完整批次，再以事务日志恢复两个记录文件，不手工并行修改。只存相关原始响应，不混入无关个人信息或凭据。
 
 实际生成后登记文件：
 
@@ -89,13 +89,13 @@ python3 <技能目录>/scripts/check_artifacts.py check <任务目录>
 
 Mermaid 命令只用现成 Node 解析器，不安装依赖、不启动浏览器。没有解析器时省略 --mermaid-module，记录 not_checked；失败与未验证要保留。语法通过不等于已渲染或关系真实。正文与 .mmd 内容一致可复用语法回执，文件变化后重登记并重验。
 
-校验分层：record_valid（记录/引用/证据级别）、artifacts_valid（存在性/哈希/代码路径行号/本地 Markdown 链接）、budget_status（能否继续）、budget_compliant（有无超限）、question_coverage、diagrams。call_counts 区分 reserved/sealed/pending；预留占额度，不等于已实际执行。delivery_complete 还要求 Markdown 和用户指定载体均已交付、问题完整、无 pending 调用/不确定写入且图语法通过；退出码 0 或 delivery_complete 不等于事实准确率，也不掩盖预算超限。仍有缺口的报告也应交付，如实说明未完成项，不篡改状态求全绿。
+校验分层：record_valid、artifacts_valid、budget_status、budget_compliant、question_coverage、collection_coverage、diagrams。full 覆盖要求评估四域、前史与讨论；targeted 仅覆盖用户限定问题。call_counts 区分 reserved/sealed/pending。delivery_complete 还要求当前输入版本、远端回执及必要的内容/权限回读一致，无不确定写入；旧 schema 没有这些绑定时保留历史，不补造回执。退出码或完整标志不证明事实准确率。仍有缺口的报告照常交付，如实说明缺口。
 
 旧 schema v1 可读取和审计，不自动升级；输出时间/环境/覆盖缺失警告。不要补写虚构的历史时间、参数或原始响应。后续刷新新建 v2 任务目录并链接旧报告。
 
 ## 写入断点与对账
 
-每种操作最多两次明确提交。一次尝试格式：
+使用 [远端交付记录](delivery.md) 的 operation start/result/verify，不再手填成功标志；每种操作最多两次明确提交。以下历史最小格式仍可审计，但缺少输入绑定/调用/回读时不能判当前交付完整：
 
 ```json
 {"status": "inflight", "request_tag": "本次唯一标签", "content_sha256": "本地待提交正文或HTML的SHA256", "receipt": {}, "confirmed_not_applied": false}

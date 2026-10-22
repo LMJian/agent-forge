@@ -19,11 +19,13 @@ SUPPORT = {"proposal", "decision", "implementation", "runtime", "context"}
 STATUSES = {"inflight", "unknown", "submitted", "succeeded", "failed"}
 
 
-def initial_state(topic, *, document=False, html=False, publish=False, read_only=False):
+def initial_state(topic, *, document=False, html=False, publish=False, read_only=False,
+                  recording_mode="light", coverage_scope="full"):
     if read_only and (document or publish):
         raise ValueError("read_only forbids remote document creation and publication")
     run = {
         "schema_version": 2, "run_id": uuid.uuid4().hex[:12], "topic": topic,
+        "recording_mode": recording_mode, "coverage_scope": coverage_scope,
         "created_at": datetime.now(timezone.utc).isoformat(), "identity": "user",
         "delivery": {"document": document, "html": html or publish,
                      "publish": publish, "read_only": read_only},
@@ -203,13 +205,23 @@ def main():
     init.add_argument("--topic", required=True)
     for flag in ("document", "html", "publish", "read-only"):
         init.add_argument("--" + flag, action="store_true")
+    init.add_argument("--recording-mode", choices=["light", "audit"], default="light")
+    init.add_argument("--coverage-scope", choices=["full", "targeted"], default="full")
+    init.add_argument("--questions-file", type=Path)
+    init.add_argument("--start", action="store_true")
     check = sub.add_parser("check")
     check.add_argument("directory", type=Path)
     args = parser.parse_args()
     try:
         if args.command == "init":
             run, evidence = initial_state(args.topic, document=args.document, html=args.html,
-                                          publish=args.publish, read_only=args.read_only)
+                                          publish=args.publish, read_only=args.read_only,
+                                          recording_mode=args.recording_mode, coverage_scope=args.coverage_scope)
+            if args.questions_file:
+                from workflow import apply_updates
+                apply_updates(run, evidence, {"questions": json.loads(args.questions_file.read_text())})
+            if args.start:
+                run["clock"]["running"] = {"phase": "collection", "started_at": datetime.now(timezone.utc).isoformat()}
             args.directory.mkdir(parents=True, exist_ok=True)
             paths = [args.directory / name for name in ("run.json", "evidence.json")]
             if any(p.exists() for p in paths):

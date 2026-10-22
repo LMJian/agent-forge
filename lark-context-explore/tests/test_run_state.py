@@ -23,7 +23,7 @@ class LedgerFixture(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
-        self.run, self.evidence = checks.initial_state("Fixture", read_only=True)
+        self.run, self.evidence = checks.initial_state("Fixture", read_only=True, coverage_scope="targeted")
         self.run["questions"] = [{"id": "q1", "text": "What is the design?", "requires": ["document"],
                                   "status": "unanswered", "claim_ids": [], "gaps": ["not read yet"]}]
         state.clock(self.run, "start", "collection")
@@ -152,15 +152,10 @@ class LedgerScenarios(LedgerFixture):
         result = state.finish(self.root, self.run, p["call_id"], p["capture_stdout"], p["capture_stderr"], 0)
         self.assertEqual("failed", result["outcome"])
 
-    def test_discovery_is_single_bounded_and_does_not_unlock_batch(self):
+    def test_bounded_search_is_a_valid_probe_even_without_document_token(self):
         request = copy.deepcopy(self.request)
         request.update(argv=["lark-cli", "docs", "+search", "--query", "fixture", "--as", "user"], discovery_reason="No seed token")
         self.complete(state.prepare(self.root, self.run, request, probe=True))
-        with self.assertRaisesRegex(ValueError, "unverified"):
-            state.prepare(self.root, self.run, self.request)
-        with self.assertRaisesRegex(ValueError, "only one"):
-            state.prepare(self.root, self.run, request, probe=True)
-        self.probe()
         state.prepare(self.root, self.run, self.request)
 
     def test_complete_argv_and_read_times_are_preserved(self):

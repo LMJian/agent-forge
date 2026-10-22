@@ -31,7 +31,7 @@
 
 新的一次收集新建一个 HTML 应用，不复用已有 app 覆盖用户内容。同一次任务的恢复/重试复用已记录的 app_id；用户明确要求更新某个既有应用时，先定位并按其授权范围处理。
 
-先读取 `run.json` 中 `operations.app` / `operations.publish`：已有成功 app_id 就复用；`inflight`、`unknown` 或 `submitted` 先按 [断点对账](state.md) 查询，不再次创建或发布。每次远端写入前记录唯一请求标签、输入文件 SHA-256、尝试次数与 `inflight`，响应后立即保存 ID/URL/状态；交付调用同样受总预算约束。
+按 [远端交付记录](delivery.md) 使用 operation 命令绑定 HTML 输入和原生调用回执。已有成功 app_id 就复用；inflight/unknown/submitted 先按 [断点对账](state.md) 查询。新应用实际权限须由 access-scope-get 原始回执核验，通过 app verify 后才能 start publish；本地 HTML 变化后旧成功回执不能覆盖新版本。交付调用仍受总预算约束。
 
 ```bash
 lark-cli apps +create --name "事项名 · 背景包" --app-type html --as user

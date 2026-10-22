@@ -24,6 +24,18 @@ Mermaid 适配器单元测试使用明确标记的 stub 模块，只验证调用
 
 ## 决策场景
 
+随包提供五组冻结材料：纯群聊、明确替代与前史、新草稿不替代旧决定、低收益止损、不确定创建。以下命令可导出不含预期答案的输入，再检查执行者的离线产物：
+
+```bash
+python3 <技能目录>/scripts/evaluate_behavior.py list
+python3 <技能目录>/scripts/evaluate_behavior.py export --case chat-only --output case-input.json
+python3 <技能目录>/scripts/evaluate_behavior.py score --case chat-only --result result.json
+```
+
+result.json 使用独立评估格式：claims（text/status/current/source_ids）、report（正文文本）、trace（argv/source_id/observed_text）、conflicts（来源 ID 对）、stop_reason。source_ids 引用导出输入中的 ID，引用的来源须出现在实际读取轨迹中；不伪造生产 run.json 或真实 CLI 回执。评分检查关键事实、出处锚、决策状态、矛盾、只读边界和停止行为，并输出 cli_attempts/observed_chars/report_chars；字符数是成本代理，不宣称模型 token 用量。
+
+单元测试对评分器运行合成正反例，并对真实本地工作流脚本运行探测、批量更新、事务恢复、覆盖和交付绑定场景。它们证明脚本与评分规则的行为，不能标为独立模型已通过。若要比较真实 agent，给执行者 export 结果和 Skill，在已获授权的离线环境完成任务；把实际产物交给 score，保留失败与成本。不要把根据 expected_facts 自动拼出的样例当作模型输出。
+
 在允许的评估环境里给执行者对应请求与材料，检查实际动作计划/本地产物。未来如需独立 agent 前向测试，遵守当次会话的委派授权；不能把下表当作授权操作真实资产的指令。
 
 | 场景和合成输入 | 应观察到的行为 | 失败条件 |
