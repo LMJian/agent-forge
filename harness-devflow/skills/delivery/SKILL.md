@@ -1,6 +1,6 @@
 ---
 name: delivery
-description: "Push reviewed changes or create a review request through explicit provider adapters, including a local-only delivery path."
+description: "Deliver an active Harness task to its selected pushed or PR/MR endpoint using project adapters."
 ---
 
 # Code delivery

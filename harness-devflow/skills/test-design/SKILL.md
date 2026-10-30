@@ -1,6 +1,6 @@
 ---
 name: test-design
-description: "Turn requirements and module designs into provider-neutral test scenarios before implementation and automation."
+description: "Define acceptance-mapped scenarios for the selected test_design stage of an active Harness workflow."
 ---
 
 # Test scenario design

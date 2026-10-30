@@ -41,7 +41,7 @@ def inputs(workflow, state: dict, spec: dict, cwd: Path) -> dict | None:
             "context_files": files, "command": digest(spec), "config": state["execution_hash"]}
 
 
-def validate_source(workflow, state, name, source_id, module=None):
+def validate_source(workflow, state, name, source_id, module=None, *, inputs_cache=None):
     """Read-only eligibility; execution repeats this check under the task lock."""
     stage = current(state)
     require(stage in {"implement", "review", "integration"}, "Reuse requires implementation or final verification")
@@ -64,14 +64,7 @@ def validate_source(workflow, state, name, source_id, module=None):
             "Reuse requires a successful review check or eligible module check from this task and checkout")
     require(not source.get("reused_from"), "Select the original executed check, not a reused receipt")
     require(source.get("reuse_inputs"), "This check was not executed with an explicit reuse policy")
-    require(not any(r["kind"] == "check" and r["name"] == name and r["status"] == "failed"
-                    for r in state["runs"][state["runs"].index(source) + 1:]),
-            "A newer failed check supersedes this result; execute a fresh check")
-    require(inputs(workflow, state, spec, workflow.root) == source["reuse_inputs"],
-            "Check inputs, configuration or environment changed; execute a fresh check")
-    age = (datetime.now(timezone.utc) - datetime.fromisoformat(source["finished_at"])).total_seconds()
-    require(0 <= age <= min(spec["reuse"]["max_age_seconds"], state["config"]["review_max_age_seconds"]),
-            "Original check expired; execute a fresh check")
+    validate_receipt(workflow, state, source, inputs_cache=inputs_cache)
     verify_snapshots(workflow.root, source["evidence"])
     return source
 
@@ -96,13 +89,28 @@ def reuse(workflow, name: str, source_id: str, module=None) -> dict:
         return receipt
 
 
-def validate_receipt(workflow, state, receipt):
-    """Recheck inputs/age at submission and delivery, not only when requesting reuse."""
+def validate_receipt(workflow, state, receipt, *, inputs_cache=None):
+    """Apply the same freshness rules at checkpoints, completion and delivery."""
+    spec = state["config"]["checks"][receipt["name"]]
+    cross_stage = bool(receipt.get("reuse_inputs")) and spec.get("reuse", {}).get("across_stages", False)
+    require(not any(r["kind"] == "check" and r["name"] == receipt["name"] and
+                    r["cwd"] == receipt["cwd"] and r["status"] == "failed" and
+                    (cross_stage or (r["stage"] == receipt["stage"] and r.get("module") == receipt.get("module")))
+                    for r in state["runs"][state["runs"].index(receipt) + 1:]),
+            "A newer failed check supersedes this result; execute a fresh check")
     if not receipt.get("reuse_inputs"):
         return
-    spec = state["config"]["checks"][receipt["name"]]
-    require(inputs(workflow, state, spec, workflow.root) == receipt["reuse_inputs"],
-            "Check inputs or environment changed after execution")
+    require(spec.get("reuse"), "Check reuse policy changed; execute a fresh check")
     age = (datetime.now(timezone.utc) - datetime.fromisoformat(receipt["finished_at"])).total_seconds()
     require(0 <= age <= min(spec["reuse"]["max_age_seconds"], state["config"]["review_max_age_seconds"]),
             "Reusable check evidence expired")
+    key = (receipt["name"], receipt["cwd"])
+    if inputs_cache is None:
+        current_inputs = inputs(workflow, state, spec, Path(receipt["cwd"]))
+    else:
+        # A read-only candidate search may share inputs. Execution always validates
+        # afresh under its lock; this cache never leaves the current search.
+        if key not in inputs_cache:
+            inputs_cache[key] = inputs(workflow, state, spec, Path(receipt["cwd"]))
+        current_inputs = inputs_cache[key]
+    require(current_inputs == receipt["reuse_inputs"], "Check inputs or environment changed after execution")

@@ -1,6 +1,6 @@
 ---
 name: implement
-description: "Implement planned module tasks with guided checkpoints or autonomous execution, verify actual behavior and integrate dependency waves."
+description: "Execute module tasks and record verification for the implementation stage of an active Harness workflow."
 ---
 
 # Module implementation
@@ -15,7 +15,9 @@ commands always point to the owning repository and task ID.
    `awaiting_host` request, use the authorized host tool at the exact requested base SHA and
    `attach-worktree MODULE --path ...`. The core checks repository identity, base and ownership.
 2. Follow the recorded task IDs, expected behavior and verification method. Preserve existing
-   user changes. Use relevant project methods and environment tools when available.
+   user changes and established error-handling conventions. Add validation at actual trust
+   boundaries; add retries, fallbacks or abstractions only for a concrete contract, observed
+   failure or required acceptance case. Keep unrelated hardening outside the implementation.
 3. In **guided** mode, implement the next task, run a configured check with `--module MODULE`,
    save the observed behavior/results in an artifact, and run:
 
@@ -30,11 +32,17 @@ commands always point to the owning repository and task ID.
    available; final task coverage and module checks are still required.
 5. Inspect `verify-plan --module MODULE`, then run `verify --module MODULE` for the final code.
    The critical path runs first; unchanged deterministic checks may reuse their real receipts.
-   In checkout mode, uncommitted
-   implementation can be verified locally. In worktree mode, commit module changes first so
+   For a local checkout target, implementation may remain uncommitted. For a remote target,
+   commit the intended module changes before final verification to avoid invalidating the
+   receipts immediately afterward. In worktree mode, commit module changes first so
    the core can integrate the exact verified commit. Do not include unrelated user work in a commit.
 6. Write a result body containing `status`, `summary`, `completed_tasks`, `acceptance`, `artifacts`
    and actual `checks` IDs. Use `submit-module MODULE --result FILE`; do not write envelope fields.
+
+If inspection proves the existing behavior already satisfies acceptance, keep code unchanged.
+Submit `outcome: no_changes` with a concrete `reason` and the same required task coverage and
+real checks. This is verified existing behavior, not a waiver or permission to omit a test.
+Do not manufacture a code edit or commit merely to satisfy the workflow.
 
 Checkout completion integrates the single module directly. In worktree mode, `merge-wave` runs
 after all members are verified. Resolve actual conflicts using the intended behaviors and commit
@@ -48,16 +56,12 @@ capability and the user/project authorizes it. Each worker receives repository/t
 its working directory, task details and artifact references. Wait on actual returned worker handles;
 a missing worker or a failure never counts as completion.
 
-Use focused tests for each task and the full selected module checks at completion. If the task
-plan materially changes, reopen plan. Preserve historical checkpoint artifacts and command logs.
+Use focused tests while diagnosing or changing behavior. Guided tasks need their required
+checkpoints; autonomous work uses one final selected module batch, with earlier eligible
+checks reused through `verify`. Module verification is not an extra semantic code review.
+If the task plan materially changes, reopen plan. Preserve historical checkpoint artifacts and command logs.
 When every module has integrated, submit an overall implementation result. Worktree cleanup is
 separate; the plugin does not delete host worktrees or unmerged changes.
 
-## Codex verification contract
-
-Follow [the Codex contract](../../references/codex-workflow.md). Prefer command/API/replay checks;
-use authorized GUI actions when appropriate. Reserve human cases for stated limitations and group
-them into a batch. `verify` runs selected checks and records command cases; `test-progress` reports
-remaining cases. Product-level outcome evidence is required in Codex mode, independently of passing
-unit/build checks. A user waiver remains an exclusion. Do not repeat manual work after the same
-failure: preserve inputs, diagnose and verify the changed product path before requesting another run.
+For `profile=codex`, apply the shared [acceptance and verification contract](../../references/codex-workflow.md).
+Keep command, agent and human evidence distinct; reuse that contract instead of loading another copy.

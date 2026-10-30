@@ -6,7 +6,7 @@ from .storage import file_lock
 
 DEPENDENCIES = {
     "intake": (), "design": ("intake",), "design_audit": ("intake", "design"),
-    "test_design": ("intake", "design", "design_audit"), "design_approval": ("design", "design_audit", "test_design"),
+    "test_design": ("intake", "design", "design_audit"), "design_approval": ("intake", "design", "design_audit", "test_design"),
     "interfaces": ("intake", "design", "test_design"), "plan": ("intake", "design", "test_design", "interfaces"),
     "implement": ("intake", "plan", "design", "test_design", "interfaces"),
     "review": ("intake", "plan", "design", "test_design", "implement"),

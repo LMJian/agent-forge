@@ -1,15 +1,19 @@
 ---
 name: flow
-description: "Run or resume Harness development, review existing changes, coordinate repository tasks, or deliver through an explicit pushed/PR/merged/deployed endpoint."
+description: "Start or resume a Harness project workflow when explicitly selected, already active, or configured as the repository default."
 ---
 
 # Development workflow
 
-Use for a requested development workflow or an existing Harness task. A question about a
-workflow does not start one. Resolve the plugin root from this file's location; the consumer
+Use when Harness is explicitly selected, owns an existing task, or is the configured project
+default. Installation alone does not select Harness for ordinary Codex planning, coding or
+review. A question about a workflow does not start one. Resolve the plugin root from this file's location; the consumer
 repository is the user's target checkout. Read [the runtime contract](references/runtime.md).
 Use [workflow ownership](../../references/routing.md) to select one orchestrator. Never start
 a second workflow over an active task just because a similarly named skill is available.
+Load shared contracts once per task and reuse unchanged instructions and input reports.
+Each stage reads only newly needed or changed context. Module checks and provider-result
+normalization do not require additional full semantic reviews.
 
 ## Start or continue
 
@@ -38,8 +42,9 @@ a second workflow over an active task just because a similarly named skill is av
    user requests only a push; it does not create a PR. See [focused tasks](../../references/focused-tasks.md).
    For a started task, run `next`. Read its action, inputs and returned Skill path. That command
    starts a pending stage and produces a concrete work packet. `status` is read-only.
-   Read only needed `inputs`; after reading, optionally `ack-context <content_id>` so unchanged
-   material is identifiable on the next packet. Use `context --all` only for missing historical context.
+   Read only needed or changed `inputs`. Use Codex's existing conversation/context to avoid
+   repeated reads; do not run `ack-context` as a routine extra bookkeeping step. It remains
+   available for explicitly requested read receipts. Use `context --all` only for missing history.
 7. Execute the returned action and submit the actual result. Repeat `next` while authorized
    work remains. Finish at the selected endpoint. An internal routing message is not delivery. In Codex mode, `next` computes the plan from
    the accepted intake packet and stops at any selected approval; do not author a duplicate plan.
@@ -86,8 +91,9 @@ actions. `sync-config` accepts an intentional project change and invalidates aff
 `configure-flow` changes actual scope/endpoint, not a failed check's outcome. Choose assistance
 before planning; an active implementation cannot weaken its checkpoint requirements.
 
-`handoff --output <new-file>` records the project goal, next action and artifact references for
-another host in the same checkout. `export` produces a human-readable progress report. `abort`
+Use Codex's native resume, compaction and chat/worktree handoff for conversation continuity.
+Harness stores project acceptance and evidence. Optional `handoff --output <new-file>` exports
+those references; it does not move a chat or replace Codex memory. `export` produces a progress report. `abort`
 stops the task; separately cancel any real scheduler when authorized. Neither action deletes worktrees.
 
 For multiple Git repositories, keep one task per repository. At the committed integration

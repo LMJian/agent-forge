@@ -1,6 +1,6 @@
 ---
 name: intake
-description: "Align a software requirement with an existing repository and produce module boundaries, acceptance criteria and a dependency graph."
+description: "Define acceptance and implementation tasks for the intake stage of an active Harness workflow."
 ---
 
 # Requirement intake

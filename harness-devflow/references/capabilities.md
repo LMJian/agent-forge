@@ -4,6 +4,11 @@ Harness keeps the workflow stages, report schemas and gates. Professional skills
 investigation, design or review methods. They never approve a workflow or synthesize command
 receipts. The CLI selects/snapshots a skill and records results; the agent performs its work.
 
+For `professional_method.provider=builtin`, execute the current stage directly and submit
+its normal report. No extra `use-skill`, snapshot, worker or professional result is required.
+The explicit handoff below is for selected non-builtin methods; existing prepared builtin
+invocations remain supported for older tasks.
+
 ## Bundled providers
 
 The distribution includes:

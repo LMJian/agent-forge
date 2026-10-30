@@ -16,11 +16,12 @@ def candidate(workflow, state, name, module=None):
     if not state["config"]["checks"][name].get("reuse"):
         return None, "No deterministic reuse policy"
     reason = "No original successful execution"
+    inputs_cache = {}
     for source in reversed(state["runs"]):
         if source["kind"] != "check" or source["name"] != name or source["status"] != "passed" or source.get("reused_from"):
             continue
         try:
-            validate_source(workflow, state, name, source["id"], module=module)
+            validate_source(workflow, state, name, source["id"], module=module, inputs_cache=inputs_cache)
             return source, "Identical declared inputs and unexpired evidence"
         except HarnessError as error:
             reason = str(error)
@@ -71,22 +72,18 @@ def verify(workflow, module=None, fresh=False):
             receipt = runner.run(workflow, "check", name, module=module)
         results.append({"name": name, "id": receipt["id"], "status": receipt["status"],
                         "reused_from": receipt.get("reused_from")})
+        if module is None and receipt["status"] in {"passed", "failed"}:
+            from .quality import cases, record_bodies
+            bodies = [{"case": case["id"], "status": receipt["status"], "check": receipt["id"],
+                       "summary": ("Configured acceptance command passed: " + case["expected"]
+                                   if receipt["status"] == "passed" else "Configured acceptance command failed"),
+                       "artifacts": [e["path"] for e in receipt["evidence"]]}
+                      for case in cases(workflow, workflow.load())
+                      if case["executor"] == "command" and case["check"] == name]
+            if bodies:
+                record_bodies(workflow, bodies)
         if receipt["status"] != "passed":
-            if module is None and receipt["status"] == "failed":
-                from .quality import cases, record_body
-                for case in cases(workflow, workflow.load()):
-                    if case["executor"] == "command" and case["check"] == name:
-                        record_body(workflow, {"case": case["id"], "status": "failed", "check": receipt["id"],
-                                             "summary": "Configured acceptance command failed",
-                                             "artifacts": [e["path"] for e in receipt["evidence"]]})
             return {"status": receipt["status"], "checks": results, "remaining": names[len(results):]}
-        if module is None:
-            from .quality import cases, record_body
-            for case in cases(workflow, workflow.load()):
-                if case["executor"] == "command" and case["check"] == name:
-                    record_body(workflow, {"case": case["id"], "status": "passed", "check": receipt["id"],
-                                         "summary": "Configured acceptance command passed: " + case["expected"],
-                                         "artifacts": [e["path"] for e in receipt["evidence"]]})
     return {"status": "passed", "checks": results, "remaining": [],
             "executed": sum(r["reused_from"] is None for r in results),
             "reused": sum(r["reused_from"] is not None for r in results)}

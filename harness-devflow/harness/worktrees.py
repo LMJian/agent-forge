@@ -116,6 +116,8 @@ def checkpoint(workflow: Workflow, module: str, step: str, summary: str, checks:
                     receipt["status"] == "passed" and receipt["fingerprint"] == code and
                     receipt["config_hash"] == state["execution_hash"], "Checkpoint requires a current passed module check")
             verify_snapshots(workflow.root, receipt["evidence"])
+            from .reuse import validate_receipt
+            validate_receipt(workflow, state, receipt)
             logs.extend(e["path"] for e in receipt["evidence"])
         recorded.append({"task": step, "summary": summary, "checks": checks, "fingerprint": code, "at": now(),
                          "evidence": snapshots(workflow.root, [*strings(artifacts, "checkpoint.artifacts"), *logs])})
@@ -130,18 +132,27 @@ def complete(workflow: Workflow, module: str, source: str) -> dict:
         require(module in wave, "Module is not in the current wave")
         item = state["modules"][module]
         require(item["status"] == "running", "Prepare the module before completing it")
+        require(not any(r["status"] == "running" and r.get("module") == module for r in state["runs"]),
+                "A module check is still running; wait for its result before completing the module")
         path = module_path(workflow, item)
         sha = vcs.head(path)
-        if state["execution_mode"] == "worktree":
-            require(vcs.clean(path), "Commit module changes before merging a worktree")
-            require(sha != item["base"] and vcs.is_ancestor(path, item["base"]), "Module needs its own implementation commit")
-        else:
-            require(vcs.is_ancestor(path, item["base"]) and vcs.fingerprint(path) != item["initial_fingerprint"],
-                    "Module needs an implementation change")
+        code = vcs.fingerprint(path)
         report = read_json(inside(workflow.root, source))
         require(report.get("schema_version") == REPORT_SCHEMA and report.get("module") == module and
                 report.get("status") == "pass", "Invalid module completion report")
         nonempty(report.get("summary"), "module.summary")
+        outcome = report.get("outcome", "implemented")
+        require(outcome in ("implemented", "no_changes"), "Invalid module outcome")
+        if state["execution_mode"] == "worktree":
+            require(vcs.clean(path), "Commit module changes before merging a worktree")
+        if outcome == "no_changes":
+            nonempty(report.get("reason"), "module.reason (why existing behavior already meets acceptance)")
+            require(code == item["initial_fingerprint"], "A no_changes result requires an unchanged module checkout")
+        elif state["execution_mode"] == "worktree":
+            require(sha != item["base"] and vcs.is_ancestor(path, item["base"]), "Module needs its own implementation commit")
+        else:
+            require(vcs.is_ancestor(path, item["base"]) and code != item["initial_fingerprint"],
+                    "Module needs an implementation change")
         tasks = strings(report.get("completed_tasks"), "module.completed_tasks")
         planned = workflow.report_for(state, "plan")["details"]["tasks"][module]
         require(set(tasks) == {t["id"] for t in planned}, "Completion must cover the planned task IDs")
@@ -158,7 +169,6 @@ def complete(workflow: Workflow, module: str, source: str) -> dict:
         required = state["config"]["stage_checks"].get("review", [])
         require(required, "Configure review checks before implementing modules")
         found = set()
-        code = vcs.fingerprint(path)
         for run_id in check_ids:
             receipt = next((r for r in state["runs"] if r["id"] == run_id), None)
             require(receipt and receipt["kind"] == "check" and receipt["module"] == module and
@@ -168,9 +178,11 @@ def complete(workflow: Workflow, module: str, source: str) -> dict:
                     f"Missing, failed or stale module check: {run_id}")
             found.add(receipt["name"])
             verify_snapshots(workflow.root, receipt["evidence"])
+            from .reuse import validate_receipt
+            validate_receipt(workflow, state, receipt)
             artifact_names.extend(e["path"] for e in receipt["evidence"])
         require(set(required) <= found, f"Missing module checks: {sorted(set(required) - found)}")
-        item.update(status="verified", head=sha, fingerprint=code, completed_tasks=tasks,
+        item.update(status="verified", head=sha, fingerprint=code, completed_tasks=tasks, outcome=outcome,
                     evidence=snapshots(workflow.root, [source, *artifact_names]))
         if state["execution_mode"] == "checkout":
             item.update(status="merged", merged_at=now())

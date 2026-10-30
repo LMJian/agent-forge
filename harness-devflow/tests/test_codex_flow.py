@@ -1,9 +1,14 @@
 """Codex's short route, technical-risk gate and acceptance ledger through real CLI/Git/checks."""
 import copy
+from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import sys
+import time
+from unittest.mock import patch
 
-from harness import guidance, runner
+from harness import guidance, quality, runner, worktrees
+from harness import git as vcs
 from harness.engine import Workflow
 from harness.model import HarnessError, default_config, resolve_workflow
 from harness.quality import progress, record_body
@@ -74,6 +79,24 @@ class CodexFlowTests(RepoCase):
         return {"case": "appearance", "status": status, "summary": "Actual observed outcome",
                 "artifacts": [str(self.artifact)], **extra}
 
+    def controlled_module(self, *, reusable=False, wait_for_release=False):
+        control = self.write(".harness/runs/codex/control", "pass")
+        config = read_json(self.root / ".harness/project.json")
+        check = config["checks"]["unit"]
+        check["argv"] = [sys.executable, "-c", "from pathlib import Path; assert Path('.harness/runs/codex/control').read_text() == 'pass'"]
+        if wait_for_release:
+            check["argv"][-1] = "from pathlib import Path\nimport time\nwhile Path('.harness/runs/codex/hold').exists():\n time.sleep(0.01)\nassert Path('.harness/runs/codex/control').read_text() == 'pass'\n"
+        if reusable:
+            check["reuse"]["context_files"] = [".harness/runs/codex/control"]
+        else:
+            check.pop("reuse")
+        atomic_json(self.root / ".harness/project.json", config)
+        self.flow.sync_config("Configure an observed pass/failure control for module verification")
+        self.intake()
+        self.cli("next")
+        _, receipt = self.implement_module()
+        return control, receipt
+
     def test_default_is_short_codex_route_and_autonomous(self):
         cfg = default_config()
         flow = resolve_workflow(cfg)
@@ -81,6 +104,47 @@ class CodexFlowTests(RepoCase):
         self.assertEqual(flow["assistance"], "autonomous")
         self.assertEqual(flow["isolation"], "checkout")
         self.assertEqual([s for s in flow["order"] if flow["enabled"][s]], ["intake", "plan", "implement", "review"])
+
+    def test_autonomous_packet_uses_batch_verification_without_task_checkpoints(self):
+        self.intake()
+        self.cli("next")
+        worktrees.prepare(self.flow, "core")
+        packet = self.cli("next")
+        self.assertNotIn("checkpoint", packet["action"]["instruction"])
+        self.assertEqual(packet["verification_command"][-3:], ["verify", "--module", "core"])
+
+    def test_command_cases_are_recorded_atomically_without_per_case_repository_scans(self):
+        original = self.details["scenarios"][0]
+        self.details["scenarios"] = [{**original, "id": "case-" + str(i)} for i in range(8)]
+        receipt = self.implement()
+        bodies = [{"case": case["id"], "status": "passed", "check": receipt["id"],
+                   "summary": "Observed the configured public behavior", "artifacts": [str(self.artifact)]}
+                  for case in self.details["scenarios"]]
+        with patch.object(self.flow, "save", wraps=self.flow.save) as saved, \
+                patch.object(quality, "valid_check", wraps=quality.valid_check) as checked, \
+                patch.object(vcs, "fingerprint", wraps=vcs.fingerprint) as scanned:
+            result = quality.record_bodies(self.flow, bodies)
+        self.assertEqual(result["passed"], 8)
+        self.assertEqual(saved.call_count, 1)
+        self.assertEqual(checked.call_count, 2)  # Once to record, once to report progress.
+        self.assertEqual(scanned.call_count, 2)
+        with patch.object(vcs, "fingerprint", wraps=vcs.fingerprint) as scanned:
+            self.assertEqual(progress(self.flow, self.flow.load())["passed"], 8)
+        self.assertEqual(scanned.call_count, 1)
+        with patch.object(quality, "record_bodies", wraps=quality.record_bodies) as recorded:
+            self.assertEqual(self.cli("verify")["status"], "passed")
+        self.assertEqual(recorded.call_count, 1)
+        self.assertEqual(len(recorded.call_args.args[1]), 8)
+        Path(receipt["stderr"]).write_text("changed evidence after the previous query")
+        self.assertEqual(progress(self.flow, self.flow.load())["stale"], 8)
+
+    def test_invalid_case_batch_does_not_record_a_successful_prefix(self):
+        receipt = self.implement()
+        good = {"case": "value", "status": "passed", "check": receipt["id"],
+                "summary": "Observed value=2", "artifacts": [str(self.artifact)]}
+        with self.assertRaisesRegex(HarnessError, "Unknown case"):
+            quality.record_bodies(self.flow, [good, {**good, "case": "unknown"}])
+        self.assertFalse(self.flow.load().get("case_results"))
 
     def test_public_cli_finishes_with_one_execution_across_three_stages(self):
         first = self.implement()
@@ -205,6 +269,7 @@ class CodexFlowTests(RepoCase):
         self.intake()
         packet = self.cli("next")
         self.assertEqual(packet["action"]["kind"], "approval")
+        self.assertIn("intake", {item["stage"] for item in packet["inputs"]})
         self.assertFalse(self.flow.load()["modules"])
         with self.assertRaises(HarnessError):
             self.flow.enter("implement")
@@ -299,6 +364,54 @@ class CodexFlowTests(RepoCase):
         result = self.cli("status")
         self.assertEqual(result["status"], "stale")
         self.assertEqual(result["test_progress"]["status"], "unavailable")
+        packet = self.cli("next")
+        self.assertEqual(packet["action"]["kind"], "repair_evidence")
+        target = self.flow.directory / "artifacts" / "recovery.json"
+        self.cli("handoff", "--output", str(target))
+        self.assertEqual(read_json(target)["action"]["kind"], "repair_evidence")
+        self.flow.reopen("intake", "Recover the missing decision report from retained source evidence")
+        self.intake()
+        self.assertEqual(self.cli("next")["stage"], "implement")
+
+    def test_existing_behavior_can_finish_without_manufacturing_code_changes(self):
+        self.details["approach"] = "The existing public API already meets acceptance; verify it without editing code"
+        self.details["journey"]["terminal_outcome"] = "Caller receives the existing documented value 1"
+        self.details["journey"]["steps"][0]["outcome"] = "base.value returns 1"
+        self.details["scenarios"][0]["expected"] = "base.value returns 1"
+        self.details["scenarios"][0]["oracle"] = "The accepted existing API contract specifies 1"
+        self.details["tasks"]["core"][0]["verification"] = "Call base.value and assert 1"
+        before = vcs.fingerprint(self.root)
+        self.intake()
+        self.cli("next")
+        worktrees.prepare(self.flow, "core")
+        receipt = runner.run(self.flow, "check", "unit", module="core")
+        fields = {"completed_tasks": ["build"], "acceptance": ["AC-1"], "checks": [receipt["id"]]}
+        malformed = self.body("invalid-outcome", outcome=[], **fields)
+        self.assertIn("Invalid module outcome", str(self.cli("submit-module", "core", "--result", str(malformed), expected=2)))
+        ordinary = self.body("module-without-change", **fields)
+        self.assertIn("implementation change", str(self.cli("submit-module", "core", "--result", str(ordinary), expected=2)))
+        missing_reason = self.body("module-without-reason", outcome="no_changes", **fields)
+        self.assertIn("reason", str(self.cli("submit-module", "core", "--result", str(missing_reason), expected=2)))
+        existing = self.body("existing-module", outcome="no_changes",
+                             reason="The unchanged public entry passed the accepted product scenario", **fields)
+        self.cli("submit-module", "core", "--result", str(existing))
+        self.cli("submit", "--result", str(self.body("implement")))
+        for stage in ("review", "integration"):
+            self.cli("next")
+            self.cli("verify")
+            result = self.cli("submit", "--result", str(self.body(stage)))
+        self.assertEqual(result["status"], "complete")
+        self.assertEqual(vcs.fingerprint(self.root), before)
+        self.assertEqual(self.flow.load()["modules"]["core"]["outcome"], "no_changes")
+
+    def test_no_changes_cannot_hide_an_actual_implementation_diff(self):
+        self.intake()
+        self.cli("next")
+        _, receipt = self.implement_module()
+        body = self.body("false-no-change", outcome="no_changes", reason="Claimed no change",
+                         completed_tasks=["build"], acceptance=["AC-1"], checks=[receipt["id"]])
+        result = self.cli("submit-module", "core", "--result", str(body), expected=2)
+        self.assertIn("unchanged", str(result))
 
     def test_stale_probe_cannot_prove_feasibility(self):
         self.cli("next")
@@ -323,3 +436,80 @@ class CodexFlowTests(RepoCase):
         self.assertEqual(result["status"], "failed")
         counts = self.cli("test-progress")
         self.assertEqual((counts["failed"], counts["passed"], counts["remaining"]), (1, 0, 1))
+
+    def test_checkpoint_rejects_a_pass_superseded_by_a_real_failure(self):
+        control, passed = self.controlled_module()
+        control.write_text("fail")
+        self.assertEqual(runner.run(self.flow, "check", "unit", module="core")["status"], "failed")
+        control.write_text("pass")
+        with self.assertRaisesRegex(HarnessError, "newer failed"):
+            worktrees.checkpoint(self.flow, "core", "build", "Observed check result", [passed["id"]], [str(self.artifact)])
+        fresh = runner.run(self.flow, "check", "unit", module="core")
+        worktrees.checkpoint(self.flow, "core", "build", "Fresh check passed", [fresh["id"]], [str(self.artifact)])
+
+    def test_module_cannot_finish_while_its_background_check_is_running(self):
+        _, passed = self.controlled_module(wait_for_release=True)
+        hold = self.write(".harness/runs/codex/hold", "wait")
+        with ThreadPoolExecutor(max_workers=1) as worker:
+            pending = worker.submit(runner.run, self.flow, "check", "unit", module="core")
+            try:
+                deadline = time.monotonic() + 5
+                while not any(r["status"] == "running" for r in self.flow.load()["runs"]):
+                    self.assertLess(time.monotonic(), deadline, "Background check did not start")
+                    time.sleep(0.01)
+                with self.assertRaisesRegex(HarnessError, "still running"):
+                    self.verify_module("core", passed)
+            finally:
+                hold.unlink()
+                fresh = pending.result(timeout=5)
+        self.assertEqual(self.flow.load()["modules"]["core"]["status"], "running")
+        self.verify_module("core", fresh)
+
+    def test_module_completion_rejects_a_pass_superseded_by_a_real_failure(self):
+        control, passed = self.controlled_module()
+        control.write_text("fail")
+        self.assertEqual(runner.run(self.flow, "check", "unit", module="core")["status"], "failed")
+        control.write_text("pass")
+        with self.assertRaisesRegex(HarnessError, "newer failed"):
+            self.verify_module("core", passed)
+        self.assertEqual(self.flow.load()["modules"]["core"]["status"], "running")
+        self.verify_module("core", runner.run(self.flow, "check", "unit", module="core"))
+
+    def test_module_completion_rechecks_declared_receipt_expiry(self):
+        _, passed = self.controlled_module(reusable=True)
+        with patch("harness.reuse.datetime") as clock:
+            clock.now.return_value = datetime.now(timezone.utc) + timedelta(days=1)
+            clock.fromisoformat.side_effect = datetime.fromisoformat
+            with self.assertRaisesRegex(HarnessError, "expired"):
+                self.verify_module("core", passed)
+
+    def test_checkpoint_and_module_recheck_declared_ignored_inputs(self):
+        control, passed = self.controlled_module(reusable=True)
+        control.write_text("changed without running another check")
+        with self.assertRaisesRegex(HarnessError, "inputs"):
+            worktrees.checkpoint(self.flow, "core", "build", "Old result", [passed["id"]], [str(self.artifact)])
+        with self.assertRaisesRegex(HarnessError, "inputs"):
+            self.verify_module("core", passed)
+
+    def test_one_runtime_scenario_can_cover_execution_and_its_output_artifact(self):
+        output = self.root / ".harness/runs/codex/product-result.txt"
+        config = read_json(self.root / ".harness/project.json")
+        check = config["checks"]["unit"]
+        check.pop("reuse")
+        check["argv"] = [sys.executable, "-c", "from pathlib import Path; from base import value as base; from feature_core import value; assert base() == 1; assert value() == 2; output = Path('.harness/runs/codex/product-result.txt'); output.write_text(str(value())); assert output.read_text() == '2'"]
+        atomic_json(self.root / ".harness/project.json", config)
+        self.flow.sync_config("Verify a runtime entry and its actual saved output together")
+        self.details["journey"]["terminal_outcome"] = "Caller receives 2 and reads the same value from the saved output"
+        self.details["journey"]["steps"].append({"id": "saved", "outcome": "Saved output contains 2", "proof": "artifact", "acceptance": ["AC-1"]})
+        case = self.details["scenarios"][0]
+        case["steps"].append("saved")
+        case["expected"] = "Public entry returns 2 and the saved output contains 2"
+        case["oracle"] = "The accepted API and file format both specify the value 2"
+        self.implement()
+        for stage in ("review", "integration"):
+            self.cli("next")
+            self.cli("verify")
+            result = self.cli("submit", "--result", str(self.body(stage, artifacts=[str(self.artifact), str(output)])))
+        self.assertEqual(result["status"], "complete")
+        self.assertEqual(output.read_text(), "2")
+        self.assertEqual(self.cli("test-progress")["passed"], 1)

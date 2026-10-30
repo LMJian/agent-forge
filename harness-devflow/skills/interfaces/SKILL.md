@@ -1,6 +1,6 @@
 ---
 name: interfaces
-description: "Apply approved public schema, API or generated-client changes through project-selected tools before implementation planning."
+description: "Apply approved schemas and code generation at the selected interfaces stage of an active Harness workflow."
 ---
 
 # Interface updates

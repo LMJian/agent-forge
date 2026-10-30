@@ -74,7 +74,7 @@ def fingerprint(root: Path) -> str:
     value = hashlib.sha256(head(root).encode())
     diff = git(root, "diff", "--no-ext-diff", "--binary", "HEAD", "--", ".", *EXCLUDES)
     value.update(diff.encode("utf-8", errors="surrogateescape"))
-    files = git(root, "ls-files", "--others", "--exclude-standard", "-z", "--", ".", *EXCLUDES)
+    files = git(root, "ls-files", "--others", "--exclude-standard", "-z", "--", ".", *EXCLUDES, strip=False)
     for name in sorted(files.split("\0")):
         if not name:
             continue

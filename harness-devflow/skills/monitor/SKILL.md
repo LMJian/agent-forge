@@ -1,6 +1,6 @@
 ---
 name: monitor
-description: "Observe a real code review request, classify CI and review feedback, and manage an explicitly requested follow-up scheduler."
+description: "Observe PR/MR and CI for an active Harness monitor stage; schedule follow-up only when explicitly requested."
 ---
 
 # Review request monitoring

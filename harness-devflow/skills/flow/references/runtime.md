@@ -8,6 +8,9 @@ python3 <plugin-root>/scripts/harness.py --repo <owning-checkout> --task <task-i
 
 Use absolute paths for actual invocations. The CLI executes deterministic operations; the host's
 Agent performs investigation, design, coding and semantic review. No separate model service is required.
+Codex retains conversation continuity and execution permissions. The optional `handoff`
+command exports Harness project references, not Codex chat state; normal resumes use `next`.
+Read receipts via `ack-context` are optional and are not a second context-management loop.
 
 ## State and paths
 
@@ -103,6 +106,16 @@ Guided modules require ordered checkpoints for every planned task. Each checkpoi
 least one real passed module check and a result artifact. Final module completion requires all
 configured review checks against the final bytes, even if earlier task checks passed. Historical
 checkpoints describe previous increments; final checks validate their combined result.
+Checkpoint, module completion and final review use the same check-freshness rules. A newer
+failed execution of the same stage/module check in the same checkout supersedes an old pass.
+Explicit `across_stages` policy extends that rule across stages. Declared inputs and expiry
+are rechecked at completion; another checkout's failure does not supersede an independent result.
+Module completion waits for that module's in-flight checks; an old pass cannot bypass them.
+
+When existing behavior already satisfies acceptance, a module may submit `outcome: no_changes`
+with a concrete `reason`. Its checkout must equal the prepared baseline, and all normal task,
+acceptance and check requirements still apply. Otherwise `outcome` defaults to `implemented`
+and requires an actual change. A no-change result does not waive product acceptance.
 
 ## Execution evidence
 
@@ -127,6 +140,8 @@ or external Git/host creation, never after the mutation. Checkout mode does not 
 Single-module checkout execution supports dirty working trees. Isolated worktrees require a
 clean wave base and committed implementation for merging. Final local review/integration may
 verify uncommitted bytes. Any subsequent commit or byte change invalidates code-bound evidence.
+For remote targets, commit intended changes before final module/review verification. Inspect
+and fix first, then verify/report against that commit, avoiding an immediate review restart.
 Opt-in deterministic local review checks may be explicitly reused across commits with identical inputs using `reuse-check`; the final review must still be reopened and bound to current HEAD. See [focused tasks](../../../references/focused-tasks.md). Remote delivery requires clean reviewed code. After naming a verified detached checkout with Git or the host, use `bind-branch --reason ...` to record the branch without changing its verified fingerprint. Review's configured age limit applies at push.
 
 ## Recovery, approval and delivery

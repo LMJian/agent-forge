@@ -93,7 +93,7 @@ def run(workflow: Workflow, kind: str, name: str, *, authorization: str | None =
         run_id = uuid.uuid4().hex
         code = vcs.fingerprint(cwd)
         from .reuse import inputs as reuse_inputs
-        reusable = reuse_inputs(workflow, state, spec, cwd) if kind == "check" else None
+        reusable = reuse_inputs(workflow, state, spec, cwd) if kind == "check" and execution["command"] == "builtin" else None
         token = digest({"task": workflow.task, "stage": stage, "epoch": epoch,
                         "name": name, "module": module, "code": code, "config": state["execution_hash"],
                         "capability": capability_use["source_digest"] if capability_use else None,

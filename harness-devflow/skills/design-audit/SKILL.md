@@ -1,13 +1,18 @@
 ---
 name: design-audit
-description: "Review selected module designs for requirement coverage, cross-module consistency, feasibility and operational risks."
+description: "Audit acceptance coverage and module contracts at the selected design_audit stage of an active Harness workflow."
 ---
 
 # Design audit
 
 Read [the runtime contract](../flow/references/runtime.md) and [review criteria](../../references/review-criteria.md). Run `next` for the selected `design_audit` stage and read intake plus every design artifact.
 
-Use [capability handoff](../../references/capabilities.md): `use-skill design_audit --reason ...`. Backend auto uses the bundled server-tech-design in **review** mode. Read its request and pinned skill, submit its findings with `record-skill`, and convert the actual findings to the Harness severity/report contract. Builtin uses the checks below. Draft and audit are separate invocations even if they use the same provider; a draft's self-check is not automatically the stage audit.
+Read `professional_method` from `next`. For `builtin`, use the checks below directly; no
+extra capability preparation/result is needed. For a professional provider, follow
+[capability handoff](../../references/capabilities.md): `use-skill design_audit --reason ...`,
+read its request and pinned skill, then normalize its actual findings with `record-skill`.
+Backend auto uses bundled server-tech-design in **review** mode. When this separate audit
+stage is selected, a draft's self-check does not replace it.
 
 Use provider findings plus focused correctness/robustness checks. Concentrate the Harness audit on acceptance coverage, cross-module field/contract agreement, dependencies and unresolved blockers. Reuse the baseline and design's evidence, tracing only unsupported or changed assumptions. Use independent reviewers only when available and authorized; otherwise review inline. Do not repeat the provider's complete checklist as another public document.
 

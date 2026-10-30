@@ -3,6 +3,9 @@
 The supported host is Codex. Keep the user's configured model. Do not spend task context
 selecting vendor adapters or weakening verification for smaller models. Legacy state/profile
 parsing remains so existing projects can finish; it is not a promise of other-host support.
+Codex owns the agent loop, chat context/resume, tools and security policy. Harness owns the
+project's acceptance/evidence/delivery ledger. Its stage plan is the single project task
+source; do not author another plan or recreate Codex session infrastructure around it.
 
 ## Three authored phases
 
@@ -18,7 +21,9 @@ parsing remains so existing projects can finish; it is not a promise of other-ho
    [explicit branch consent](branch-consent.md). No human per-task implementation checkpoints.
 3. **Verify and deliver** (`review`): execute the product path, inspect actual outputs, compare
    with an independent expected result, review the diff and fix failures. Use `verify` once per
-   selected verification stage. Report acceptance coverage, excluded cases and the actual endpoint.
+   selected verification stage. For remote delivery, commit intended changes before final
+   verification/reporting; module checks and provider-result normalization are not separate
+   full reviews. Report acceptance coverage, excluded cases and the actual endpoint.
 
 `profile=codex`, `assistance=autonomous`, `target=local`, `isolation=checkout` are new-project defaults. Four internal
 states remain (`intake`, computed `plan`, `implement`, `review`); three require authored results.
@@ -52,15 +57,17 @@ existing evidence instead of copying it into every stage. Required `details`:
   Product scenarios additionally declare `steps`, `proof=artifact|runtime` and `oracle` (independent
   expected result and its source). A command's `checks.NAME.proof` must match; build/static/component
   checks cannot masquerade as product evidence. Artifact replay cannot satisfy a runtime step.
+  One runtime scenario may also cover output-artifact steps that it actually verifies in the
+  same executed path; do not split those observations solely to satisfy proof labels.
   All journey steps need scenarios, including pending device/permission work. Missing authorization
   is not permission to silently remove a requirement or mark its runtime behavior passed.
 
 Run a configured probe during intake with `run-check NAME`. Do not replace a critical full-path
 experiment with a library import/build check. Define a go/no-go metric before executing it;
 record observed quality, timing and relevant failure modes. For image alignment, include actual
-capture characteristics (stationary chrome, low texture, reversal, dynamic elements, compression)
-and assess continuity/content preservation in the output. Evaluate at least the viable native or
-existing-library alternative before committing to a new algorithm. If unavailable real inputs or
+capture conditions and assess the complete output; choose representative failure modes for the
+actual component. Evaluate viable native or existing-library alternatives before committing
+to a new algorithm. If unavailable real inputs or
 hardware prevent proof, state the blocker and narrow the authorized scope; do not promise success.
 
 The core checks structure, receipts and freshness. Codex must assess whether the experiment and
@@ -111,7 +118,9 @@ within a tier and build-output dependencies. Do not add unrelated broad suites t
 
 `test-progress` is read-only and `status` includes the same counts. `verify [--module ID] [--fresh]`
 runs checks in tier order, stops on failure, and automatically records command cases
-in final verification. It never executes human/agent cases or auto-approves a decision.
+in final verification. Cases from one command are recorded atomically; eligibility of a shared
+check receipt is validated once per query, with no cache carried to the next query. It never executes
+human/agent cases or auto-approves a decision.
 
 For observed manual/agent results, write a body and run `record-case --result FILE`:
 
@@ -144,6 +153,8 @@ Then `verify` can reuse a same-checkout receipt, including repeated checks in th
 module; cross-stage reuse still needs `across_stages`. It rechecks tested bytes,
 file modes, executable, environment, configuration, declared ignored inputs, logs, original age,
 and newer failures. Reuse retains the original execution timestamp; it is not another run.
+Candidate searches compute declared inputs once per check/query. Execution revalidates under
+the task lock, and the snapshot is never kept for the next query or execution.
 Without `across_stages`, the old review-to-review policy remains. Worktree moves, native bridges,
 network/device/live-environment checks run afresh. Do not make signed bundles or archives reusable
 unless every ignored output/input and revision dependency is declared. Use `--fresh` when needed.

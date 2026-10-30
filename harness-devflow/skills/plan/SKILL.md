@@ -1,11 +1,15 @@
 ---
 name: plan
-description: "Create concrete implementation tasks, map them to acceptance and verification, and order modules by dependencies."
+description: "Materialize acceptance-mapped tasks for an active Harness plan stage; Codex tasks come from accepted intake."
 ---
 
 # Implementation planning
 
 Read [the runtime contract](../flow/references/runtime.md). Run `next` for the selected `plan` stage after the selected upstream stages. Read intake and any selected design/test/interface artifacts.
+
+For `profile=codex`, `next` generates the plan from accepted intake tasks and returns the next
+action. Follow that action; do not author another plan or a parallel task list. Codex's native
+plan display may summarize the same tasks. The steps below apply to other selected profiles.
 
 Write a JSON mapping of each module ID to tasks with `id`, `summary`, `acceptance` and `verification`. Make tasks actionable and proportionate: a small fix can have one task; a large module needs enough decomposition to track behavior, compatibility and testing. Every module acceptance criterion must be covered. Use actual test commands or observable checks in verification, not generic completion claims.
 

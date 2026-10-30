@@ -22,12 +22,11 @@ def packet(workflow, state: dict) -> dict:
     from .context import references
     stage = current(state)
     summary = workflow.summary(state)
-    inputs = references(workflow, state)
     result = {"task": workflow.task, "goal": state["goal"], "repository": str(workflow.root),
               "head": vcs.head(workflow.root), "fingerprint": vcs.fingerprint(workflow.root),
               "initial_dirty": state["initial_dirty"], "assistance": state["workflow"]["assistance"],
               "execution": resolve(state["config"]["host"], state["workflow"]["assistance"]),
-              "status": summary["status"], "stage": stage, "inputs": inputs,
+              "status": summary["status"], "stage": stage, "inputs": [],
               "test_progress": summary["test_progress"],
               "quality": "Only current code-bound check receipts and accepted artifacts satisfy completion"}
     result["history_command"] = command(workflow, "context", "--all")
@@ -46,6 +45,9 @@ def packet(workflow, state: dict) -> dict:
     if unresolved:
         result["action"] = {"kind": "inspect_execution", "runs": unresolved}
         return result
+    # Recovery must remain available even when an upstream report is missing.
+    # Read references only after stale evidence and in-flight work are handled.
+    result["inputs"] = references(workflow, state)
     if state["stages"][stage]["status"] in {"waiting_human", "failed"}:
         result["action"] = {"kind": "approval" if state["stages"][stage]["status"] == "waiting_human" else "diagnose",
                             "stage": stage, "details": state["stages"][stage]}
@@ -53,6 +55,10 @@ def packet(workflow, state: dict) -> dict:
     base = Path(__file__).resolve().parent.parent
     result["skill"] = str(base / "skills" / skill_for(stage) / "SKILL.md")
     result["checks"] = state["config"]["stage_checks"].get(stage, [])
+    if stage == "review" and state["workflow"]["target"] != "local":
+        result["review_preparation"] = {
+            "commit_before_verification": True, "dirty": not vcs.clean(workflow.root),
+            "instruction": "Inspect and fix the diff, then commit only the intended changes before final verification and the review report. A later commit invalidates that evidence."}
     for slot, mapped in CAPABILITY_STAGES.items():
         if mapped == stage:
             from .capabilities import selection
@@ -79,13 +85,16 @@ def packet(workflow, state: dict) -> dict:
         result["tasks"] = remaining[:1] if result["assistance"] == "guided" else remaining
         result["check_commands"] = [command(workflow, "run-check", name, "--module", mid)
                                     for name in state["config"]["stage_checks"].get("review", [])]
+        result["verification_command"] = command(workflow, "verify", "--module", mid)
         if module["status"] == "pending":
             action = {"kind": "prepare_module", "command": command(workflow, "prepare-module", mid)}
         elif module["status"] == "awaiting_host":
             action = {"kind": "host_worktree", "request": module["request"]}
         else:
             action = {"kind": "implement_task" if remaining else "submit_module",
-                      "instruction": "Implement the listed behavior, run checks, and record a checkpoint with actual artifacts"}
+                      "instruction": ("Implement the next task, run a focused check, and record its checkpoint with actual artifacts"
+                                      if remaining and result["assistance"] == "guided" else
+                                      "Complete the related tasks together, verify the final module once, and submit actual task coverage and artifacts")}
         if state["execution_mode"] == "worktree" and module["status"] in {"pending", "awaiting_host"}:
             from .branches import approved
             if not approved(state, module=mid):
@@ -178,4 +187,4 @@ def handoff(workflow, output: str) -> dict:
         target = inside(workflow.root, output)
         require(not target.exists(), "Choose a new handoff output path")
         atomic_json(target, data)
-    return {"output": str(target), "instruction": "Read this packet in the same checkout with any supported host; run next to revalidate"}
+    return {"output": str(target), "instruction": "This exports Harness project evidence, not the Codex chat. Resume or move the chat with Codex's native tools; run next in the owning checkout to revalidate."}

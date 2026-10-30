@@ -1,6 +1,6 @@
 ---
 name: release
-description: "Review release readiness, record explicit approval and optionally execute a configured deployment with concrete evidence."
+description: "Prepare release approval and verify deployment for an active Harness task with target=deployed."
 ---
 
 # Release readiness and deployment

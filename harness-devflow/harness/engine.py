@@ -255,11 +255,6 @@ class Workflow:
                     f"Invalid or failed check receipt: {run_id}")
             require(receipt["fingerprint"] == code and receipt["config_hash"] == state["execution_hash"],
                     f"Stale check receipt: {run_id}")
-            require(not any(r["kind"] == "check" and r["name"] == receipt["name"] and
-                            r["stage"] == stage and r["epoch"] == receipt["epoch"] and
-                            r.get("module") is None and r["status"] == "failed"
-                            for r in state["runs"][state["runs"].index(receipt) + 1:]),
-                    "A newer failed check supersedes the supplied receipt")
             verify_snapshots(self.root, receipt["evidence"])
             from .reuse import validate_receipt
             validate_receipt(self, state, receipt)

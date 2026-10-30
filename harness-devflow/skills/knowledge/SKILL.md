@@ -1,6 +1,6 @@
 ---
 name: knowledge
-description: "Optionally distill completed work into searchable local knowledge with configurable human review and clear provenance."
+description: "Record optional project knowledge at the selected knowledge stage of an active Harness workflow."
 ---
 
 # Knowledge closure

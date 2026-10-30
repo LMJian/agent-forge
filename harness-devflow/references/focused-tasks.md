@@ -10,6 +10,7 @@ intended baseline and acceptance from the user's request and actual code, then:
 ```text
 start-review --goal 'Review the location upload change' --base origin/master --acceptance 'Payloads preserve the agreed 16 fields' --target pushed
 next
+# Inspect/fix and commit intended changes before final checks for remote targets.
 run-check unit
 submit --result <review-result.json>
 ```

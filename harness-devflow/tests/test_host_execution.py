@@ -173,6 +173,22 @@ class PortableExecutionTests(RepoCase):
         self.assertEqual(len(self.flow.load()["runs"]), 1)
         self.checkpoint(receipt, expected=2)
 
+    def test_native_checks_with_local_reuse_policy_execute_fresh(self):
+        config = read_json(self.root / ".harness/project.json")
+        config["checks"]["unit"]["reuse"] = {
+            "context_files": [], "max_age_seconds": 7200,
+            "assumptions": "Offline deterministic check when executed locally"}
+        atomic_json(self.root / ".harness/project.json", config)
+        self.host(bridge=BRIDGE)
+        self.ready()
+        _, receipt = self.implement_module()
+        self.assertEqual((receipt["provider"], receipt["status"]), ("native", "passed"))
+        self.assertNotIn("reuse_inputs", receipt)
+        from harness.verification import verify
+        result = verify(self.flow, module="core")
+        self.assertEqual((result["executed"], result["reused"]), (1, 0))
+        self.assertEqual(self.flow.load()["runs"][-1]["provider"], "native")
+
     def test_native_denial_or_bad_request_binding_blocks_retry_and_provider_changes(self):
         self.host(bridge='import json,os\nfrom pathlib import Path\nr=json.loads(Path(os.environ["HARNESS_HOST_REQUEST"]).read_text())\nprint(json.dumps({"schema_version":1,"request_id":r["request_id"],"outcome":"denied"}))\n')
         self.ready()

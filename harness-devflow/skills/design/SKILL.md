@@ -1,13 +1,17 @@
 ---
 name: design
-description: "Develop module technical designs and explicit interface changes from accepted requirements before implementation."
+description: "Write module designs for the selected design stage of an active Harness workflow."
 ---
 
 # Technical design
 
 Read [the runtime contract](../flow/references/runtime.md). Run `next` for the selected `design` stage when selected; reuse intake and its recon baseline. Read code only to resolve missing, changed or consequential assumptions. Optional local knowledge can supplement those facts.
 
-Use [capability handoff](../../references/capabilities.md): `use-skill design --reason ...`. Backend auto selects bundled [server-tech-design](../server-tech-design/SKILL.md); other domains use the builtin method below unless configured otherwise. For a professional provider, read its request and pinned skill, draft the local design, and run `record-skill design --result ...`. Builtin means continue below without recursively invoking this wrapper.
+Read `professional_method` from `next`. For `builtin`, continue below directly without
+preparing or recording another capability invocation. For a professional provider, use
+[capability handoff](../../references/capabilities.md): `use-skill design --reason ...`,
+read its request and pinned skill, draft the design, then `record-skill design --result ...`.
+Backend auto selects bundled [server-tech-design](../server-tech-design/SKILL.md).
 
 Design modules in dependency order. Cover interface contracts, persistence and invariants, data lifecycle, main/error paths, idempotency and concurrency when relevant, compatibility, alternatives and their tradeoffs. Tie decisions to acceptance IDs. Document rollout, observability and rollback proportionally to the actual change. Include capacity assessment when new fanout or downstream load makes it material.
 

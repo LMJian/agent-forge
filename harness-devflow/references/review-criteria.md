@@ -20,6 +20,11 @@ prevent proceeding; `warning` for a material follow-up that does not invalidate 
 Record uncertainty and inspect evidence before assigning severity. `resolved` means the
 correction was made and verified, not that the finding was inconvenient.
 
+Scale defensive code to the actual boundary. Validate untrusted input and required contracts;
+inside trusted code, use established invariants and error handling. Recommend new retries,
+fallbacks, compatibility layers or abstractions only with a concrete failure or requirement.
+Recheck affected findings after a fix instead of restarting every review dimension.
+
 Plans should be implementable and tie tasks to acceptance criteria. Review the complete relevant
 diff, partitioned when necessary. Missing coverage should remain visible. Independent review
 can improve confidence when available, but no specific model, agent count or vendor is required.

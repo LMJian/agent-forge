@@ -10,6 +10,7 @@ from harness.context import acknowledge, references
 from harness.engine import Workflow
 from harness.model import HarnessError
 from harness.reuse import reuse
+from harness import reuse as check_reuse
 from harness.storage import atomic_json, read_json
 import test_host_execution as support
 from test_workflow import RepoCase
@@ -160,6 +161,57 @@ class ExistingChangesTests(RepoCase):
         file = self.root / " leading name.txt"
         file.chmod(file.stat().st_mode | 0o111)
         self.assertNotEqual(vcs.content_fingerprint(self.root), before)
+
+    def test_code_fingerprint_detects_edits_to_untracked_whitespace_names(self):
+        for name in (" leading.txt", "\tleading.txt", "\nleading.txt"):
+            with self.subTest(name=name):
+                path = self.write(name, "original bytes\n")
+                before = vcs.fingerprint(self.root)
+                path.write_text("changed bytes\n")
+                self.assertNotEqual(vcs.fingerprint(self.root), before)
+                path.unlink()
+
+    def test_remote_review_packet_prepares_commit_before_final_verification(self):
+        self.write("note.txt", "Review this existing change\n")
+        self.start_review("pushed")
+        preparation = self.cli("next")["review_preparation"]
+        self.assertTrue(preparation["commit_before_verification"])
+        self.assertTrue(preparation["dirty"])
+        self.commit("Prepare the final reviewed commit")
+        self.assertFalse(self.cli("next")["review_preparation"]["dirty"])
+
+    def test_history_candidates_share_one_input_snapshot_per_query(self):
+        self.start_review()
+        for _ in range(3):
+            latest = self.check()
+        changed = self.write("changed.txt", "New verification input\n")
+        with patch.object(check_reuse, "inputs", wraps=check_reuse.inputs) as hashed:
+            first = self.cli("verify-plan")
+        self.assertIsNone(first["checks"][0]["reuse_from"])
+        self.assertEqual(hashed.call_count, 1)
+        changed.unlink()
+        with patch.object(check_reuse, "inputs", wraps=check_reuse.inputs) as hashed:
+            second = self.cli("verify-plan")
+        self.assertEqual(second["checks"][0]["reuse_from"], latest["id"])
+        self.assertEqual(hashed.call_count, 1)
+
+    def test_another_checkout_failure_does_not_supersede_this_check(self):
+        self.start_review()
+        passed = self.check()
+        state = self.flow.load()
+        state["runs"].append({**passed, "id": "another-checkout-failure", "status": "failed", "cwd": str(self.root / "other-checkout")})
+        source = check_reuse.validate_source(self.flow, state, "unit", passed["id"])
+        self.assertEqual(source["id"], passed["id"])
+
+    def test_stage_specific_failure_does_not_invalidate_another_stage(self):
+        self.start_review()
+        passed = self.check()
+        state = self.flow.load()
+        state["runs"].append({**passed, "id": "different-stage-failure", "status": "failed", "stage": "integration"})
+        check_reuse.validate_receipt(self.flow, state, passed)
+        state["config"]["checks"]["unit"]["reuse"]["across_stages"] = True
+        with self.assertRaisesRegex(HarnessError, "newer failed"):
+            check_reuse.validate_receipt(self.flow, state, passed)
 
 
 class ScopedContextTests(RepoCase):

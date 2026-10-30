@@ -127,22 +127,20 @@ def validate_journey(state, details, scenarios):
         claims = set()
         for sid in ids:
             step = by_id[sid]
-            require(step["proof"] == proof, "Artifact replay cannot prove a runtime journey step")
+            require(proof == "runtime" or step["proof"] == proof, "Artifact replay cannot prove a runtime journey step")
             claims.update(step["acceptance"])
         require(set(case["acceptance"]) <= claims, "Scenario acceptance must match the steps it actually observes")
         witnessed.update(ids)
     require(witnessed == set(by_id), "Journey has untested steps; keep runtime/permission gaps pending instead of removing them")
 
 
-def valid_check(workflow, state, run_id, name=None):
+def valid_check(workflow, state, run_id, name=None, *, code=None):
     receipt = next((r for r in state["runs"] if r["id"] == run_id), None)
     require(receipt and receipt["kind"] == "check" and receipt["status"] == "passed" and
             (name is None or receipt["name"] == name), "Case needs its actual successful configured check")
-    require(receipt["fingerprint"] == vcs.fingerprint(workflow.root) and
+    require(receipt["fingerprint"] == (code if code is not None else vcs.fingerprint(workflow.root)) and
             receipt["config_hash"] == state["execution_hash"] and
             receipt["cwd"] == str(workflow.root), "Case check is stale or belongs to another checkout")
-    require(not any(r["kind"] == "check" and r["name"] == receipt["name"] and r["status"] == "failed"
-                    for r in state["runs"][state["runs"].index(receipt) + 1:]), "A newer failed check supersedes case evidence")
     verify_snapshots(workflow.root, receipt["evidence"])
     from .reuse import validate_receipt
     validate_receipt(workflow, state, receipt)
@@ -160,7 +158,7 @@ def latest(workflow, state):
     return {r["case"]: r for r in state.get("case_results", []) if r["intake_epoch"] == epoch}
 
 
-def result_status(workflow, state, case, result, code):
+def result_status(workflow, state, case, result, code, checks):
     if result is None:
         return "pending"
     try:
@@ -168,7 +166,12 @@ def result_status(workflow, state, case, result, code):
         if result["status"] != "waived":
             require(result["fingerprint"] == code and result["config_hash"] == state["execution_hash"], "Code changed")
         if result["status"] == "passed" and case["executor"] == "command":
-            valid_check(workflow, state, result["check"], case["check"])
+            key = (result["check"], case["check"])
+            if key not in checks:
+                checks[key] = False
+                valid_check(workflow, state, result["check"], case["check"], code=code)
+                checks[key] = True
+            require(checks[key], "Case check is stale")
     except (HarnessError, KeyError, ValueError):
         return "stale"
     return result["status"]
@@ -179,9 +182,10 @@ def progress(workflow, state):
         definitions = cases(workflow, state)
     except (HarnessError, KeyError, TypeError) as error:
         return {"total": 0, "remaining": None, "status": "unavailable", "error": str(error), "cases": []}
-    records, code = latest(workflow, state), vcs.fingerprint(workflow.root)
+    records, code = latest(workflow, state), vcs.fingerprint(workflow.root) if definitions else None
+    checks = {}  # Only this query shares validation; the next query checks evidence afresh.
     items = [{"id": c["id"], "executor": c["executor"], "level": c["level"],
-              "batch": c.get("batch"), "status": result_status(workflow, state, c, records.get(c["id"]), code)}
+              "batch": c.get("batch"), "status": result_status(workflow, state, c, records.get(c["id"]), code, checks)}
              for c in definitions]
     counts = dict.fromkeys(("pending", "passed", "failed", "blocked", "waived", "stale"), 0)
     counts.update(Counter(i["status"] for i in items))
@@ -199,37 +203,57 @@ def record(workflow, source):
 
 
 def record_body(workflow, body):
+    return record_bodies(workflow, [body])
+
+
+def record_bodies(workflow, bodies):
+    """Record one observed command's cases atomically, without per-case state reloads."""
+    require(bodies, "No case results to record")
     with file_lock(workflow.lock_path):
         state = workflow.load()
         # A newly observed failure can invalidate a completed review; retain that failure
         # even then. Positive outcomes still require the normal reopen/repair path.
-        if body.get("status") not in {"failed", "blocked"}:
+        if any(body.get("status") not in {"failed", "blocked"} for body in bodies):
             workflow.consistent(state)
         require(not any(r["status"] in {"running", "unresolved"} for r in state["runs"]), "Resolve active commands first")
-        case = next((c for c in cases(workflow, state) if c["id"] == body.get("case")), None)
-        require(case, "Unknown case in the current Codex intake")
         from .engine import current
-        require(current(state) in {"implement", "review", "integration"} or
-                (current(state) is None and body.get("status") in {"failed", "blocked"}),
-                "Record cases during implementation or verification (post-delivery failures remain recordable)")
-        status = body.get("status")
-        require(status in {"passed", "failed", "blocked", "waived"}, "Invalid case status")
-        nonempty(body.get("summary"), "case result.summary")
-        evidence = snapshots(workflow.root, strings(body.get("artifacts"), "case result.artifacts"))
-        if status == "waived" or (status == "passed" and case["executor"] == "human"):
-            require(body.get("actor") == "user", "Human outcomes/waivers need the actual user decision")
-            nonempty(body.get("authorization"), "case result.authorization (quote actual user response)")
-        if status == "passed" and case["executor"] == "command":
-            receipt = valid_check(workflow, state, body.get("check"), case["check"])
-            require(receipt["stage"] in {"implement", "review", "integration"}, "Feasibility is not final product verification")
-            evidence.extend(receipt["evidence"])
-        result = {"id": uuid.uuid4().hex, "case": case["id"], "status": status,
-                  "summary": body["summary"], "check": body.get("check"), "actor": body.get("actor", "codex"),
-                  "authorization": body.get("authorization"), "evidence": evidence,
-                  "intake_epoch": state["stages"]["intake"]["epoch"], "at": now(),
-                  "fingerprint": vcs.fingerprint(workflow.root), "config_hash": state["execution_hash"]}
-        state.setdefault("case_results", []).append(result)
-        workflow.save(state, "case_recorded", case=case["id"], status=status)
+        stage = current(state)
+        definitions = {c["id"]: c for c in cases(workflow, state)}
+        code, checks, artifacts, results = vcs.fingerprint(workflow.root), {}, {}, []
+        for body in bodies:
+            case = definitions.get(body.get("case"))
+            require(case, "Unknown case in the current Codex intake")
+            status = body.get("status")
+            require(stage in {"implement", "review", "integration"} or
+                    (stage is None and status in {"failed", "blocked"}),
+                    "Record cases during implementation or verification (post-delivery failures remain recordable)")
+            require(status in {"passed", "failed", "blocked", "waived"}, "Invalid case status")
+            nonempty(body.get("summary"), "case result.summary")
+            paths = tuple(strings(body.get("artifacts"), "case result.artifacts"))
+            if paths not in artifacts:
+                artifacts[paths] = snapshots(workflow.root, list(paths))
+            evidence = list(artifacts[paths])
+            if status == "waived" or (status == "passed" and case["executor"] == "human"):
+                require(body.get("actor") == "user", "Human outcomes/waivers need the actual user decision")
+                nonempty(body.get("authorization"), "case result.authorization (quote actual user response)")
+            if status == "passed" and case["executor"] == "command":
+                run_id = nonempty(body.get("check"), "case.check")
+                key = (run_id, case["check"])
+                if key not in checks:
+                    checks[key] = valid_check(workflow, state, run_id, case["check"], code=code)
+                receipt = checks[key]
+                require(receipt["stage"] in {"implement", "review", "integration"}, "Feasibility is not final product verification")
+                evidence.extend(receipt["evidence"])
+            results.append({"id": uuid.uuid4().hex, "case": case["id"], "status": status,
+                            "summary": body["summary"], "check": body.get("check"), "actor": body.get("actor", "codex"),
+                            "authorization": body.get("authorization"), "evidence": evidence,
+                            "intake_epoch": state["stages"]["intake"]["epoch"], "at": now(),
+                            "fingerprint": code, "config_hash": state["execution_hash"]})
+        state.setdefault("case_results", []).extend(results)
+        if len(results) == 1:
+            workflow.save(state, "case_recorded", case=results[0]["case"], status=results[0]["status"])
+        else:
+            workflow.save(state, "cases_recorded", cases=[{"case": r["case"], "status": r["status"]} for r in results])
         return progress(workflow, state)
 
 
