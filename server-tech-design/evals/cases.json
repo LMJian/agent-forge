@@ -80,6 +80,111 @@
         "说明核对了输入类型、边界长度和失败时不写库；不推断实际代码或线上状态。",
         "保留设计阶段边界，不把缺少已执行测试当成阻塞问题，不修改输入文档。"
       ]
+    },
+    {
+      "id": "delivery-default-plan",
+      "request": "根据 inputs.md 和 delivery-state.json，为一份未指定格式的新技术方案制定交付计划。说明目标产物、发布与核验动作。当前只做本地推演，不实际发布。",
+      "files": {
+        "inputs.md": "# 需求\n请求服务必须在任务保存成功后才返回成功。存储失败时返回错误。\n",
+        "delivery-state.json": "{\"simulation_only\": true, \"explicit_format\": null, \"lark_tool\": \"available\", \"authenticated\": true, \"write_permission\": true, \"reader_access\": true}"
+      },
+      "criteria": [
+        "把飞书列为新方案的默认计划目标，不无故要求用户再次选择格式。",
+        "计划保留必要的本地源稿，创建后回读正文、表格、代码和实际素材，不能仅凭创建回执认定一致。",
+        "只输出交付计划，不调用真实飞书服务，也不声称已经创建或验证远程文档。"
+      ]
+    },
+    {
+      "id": "delivery-explicit-local",
+      "request": "根据 requests.json 判断每个合成调用的输出位置，并说明实际允许的动作。只做本地分析，不创建远程文档。",
+      "files": {
+        "requests.json": "{\"lark_available\": true, \"requests\": [{\"operation\": \"draft\", \"user_request\": \"输出到 docs/design.md，暂不发布。\"}, {\"operation\": \"draft\", \"caller\": \"Harness\", \"format\": \"local_markdown\", \"output_directory\": \".harness/artifacts\"}, {\"operation\": \"review\", \"user_request\": \"只指出 design.md 的问题，不修改文件。\"}]}"
+      },
+      "criteria": [
+        "显式 docs/design.md 和 Harness local_markdown 合同均保持本地产物，不被默认飞书覆盖。",
+        "仅评审请求返回问题，不自动创建飞书报告或修改源文档。",
+        "不把用户选择本地格式描述成平台不支持飞书。"
+      ]
+    },
+    {
+      "id": "delivery-unavailable",
+      "request": "根据 inputs.md 编写简短技术方案。环境限制在 environment.md 中。未指定产物格式，请按技能默认交付规则处理。",
+      "files": {
+        "inputs.md": "# 合成需求\n客户端提交任务后，需要知道任务是否已保存。服务在存储确认成功后返回成功，其他情况返回错误。没有线上验证结果。\n",
+        "environment.md": "这是合成环境，仅做本地推演。不要调用真实外部服务、修改权限或安装工具。\n当前没有可用飞书连接器或 CLI。允许在本案例目录中创建本地文件。\n"
+      },
+      "criteria": [
+        "保存完整的本地 .md 文档，而不是只在聊天里给出大纲。",
+        "明确回退原因是飞书工具不可用，不虚构缺少某个具体权限或远程文档链接。",
+        "不为维持默认目的地安装工具、发起无依据授权或丢弃已完成设计。"
+      ]
+    },
+    {
+      "id": "delivery-auth-gap",
+      "request": "用户明确要求飞书技术方案，但当前状态如 delivery-state.json。仅在本地推演后续动作、回退产物和应报告的交付状态，不发起真实认证。",
+      "files": {
+        "delivery-state.json": "{\"lark_tool\": \"available\", \"authentication\": \"missing\", \"user_explicitly_requires_lark\": true, \"source_draft\": \"draft.md\"}",
+        "draft.md": "# 任务保存方案\n存储成功后返回成功。存储失败时返回错误。\n"
+      },
+      "criteria": [
+        "区分缺少认证与平台不支持，保留本地 Markdown。",
+        "说明显式飞书目标仍未完成，指出最小认证步骤，不把 Markdown 称为飞书交付成功。",
+        "不静默改用 bot、降低凭据保护、扩大共享范围或进行真实认证。"
+      ]
+    },
+    {
+      "id": "delivery-unknown-create",
+      "request": "根据 delivery-state.json 推演如何恢复这次技术方案交付。不要实际调用外部平台。",
+      "files": {
+        "delivery-state.json": "{\"last_create\": {\"status\": \"timeout\", \"operation_id\": \"operation-17\"}, \"operation_lookup\": {\"status\": \"created\", \"document_id\": \"mock-doc-17\"}, \"readback_available\": true, \"local_source_available\": true}"
+      },
+      "criteria": [
+        "先利用已有操作 ID 确认创建结果，再回读 mock-doc-17；不盲目重试创建第二份文档。",
+        "不把超时当作不支持飞书，不丢弃已知文档 ID 或本地源稿。",
+        "把推演步骤与真实执行结果分开，不声称实际完成了远程核验。"
+      ]
+    },
+    {
+      "id": "delivery-readback-and-assets",
+      "request": "对照 draft.md、readback.xml 和 delivery-state.json，指出需要修正的交付差异并给出最小修复计划。只分析这些本地快照，不修改远端。",
+      "files": {
+        "draft.md": "# 缓存方案\n\n**关闭 `enabled` 后拒绝新任务。**\n\n```json\n{\"ttl_hours\":24}\n```\n\n图和样例属于本次交付；内部诊断报告仅供调研引用。\n",
+        "readback.xml": "<title>缓存方案</title><p><b>关闭 </b><code><b>enabled</b></code><b> 后拒绝新任务。</b></p><pre lang=\"json\"><code>{\"ttl_hours\":48}</code></pre><p>图和样例属于本次交付；内部诊断报告仅供调研引用。</p>",
+        "delivery-state.json": "{\"document_id\":\"mock-doc-18\",\"authorized_resources\":[\"figure.png\",\"example.json\"],\"linked_only\":[\"private-review.md\"],\"figure_status\":\"not_inserted\",\"private_review_upload_authorized\":false,\"readback_revision\":13,\"current_revision\":14,\"changed_since_readback\":[\"code_block\"],\"revision_precondition_supported\":true}"
+      },
+      "criteria": [
+        "识别 ttl_hours 的 24/48 内容差异；块数和标题相同不能证明一致。",
+        "将相邻加粗节点与行内代码归并为相同可见样式，不把节点数不同误判为文字丢失。",
+        "在同一个文档中定向修复代码块、补入授权图和样例并回读，不覆盖非空全文或创建重复文档。",
+        "修复前读取当前代码块并使用版本条件；不能按 revision 13 的旧快照覆盖 revision 14 的协作修改。",
+        "不因存在引用就上传 private-review.md；保留引用缺口并只请求必要授权。"
+      ]
+    },
+    {
+      "id": "writing-full-scope",
+      "request": "按 Reader and explanation guidance 和 Chinese controlled language 全文检查 design.md，有问题直接修复。以 facts.md 为依据，不改变技术契约或新增机制。",
+      "files": {
+        "facts.md": "一次请求包含多个任务，每个任务包含多条明细。task_id 标识任务。每个任务单独去重，Redis 键包含用户和 task_id 的 SHA-256 哈希值，TTL 为 24 小时。原始明细按模板生成可读文本，供下游处理。只有收到 MQ 存储确认后才写投递标记；标记写入失败仍返回投递成功。\n",
+        "design.md": "# 任务上报方案\n客户端需要把明细交给下游处理，并减少网络重试造成的重复发送。一次请求包含多个任务，每个任务包含多条明细。\n\n批次用 task_id 标识。一次批次可以包含多个任务，服务按批次去重。任务 ID 摘要用于 Redis 键；数据摘要是发给下游的可读文本。\n\n确认成功后，服务写标记并返回成功；标记失败也返回投递成功。标记保留 24 小时。\n\n```json\n{\"ttl_hours\":24}\n```\n"
+      },
+      "criteria": [
+        "检查整个文稿，区分请求、任务和明细；修正批次在不同层次上的混用。",
+        "区分任务 ID 的哈希值和内容概述，补全存储确认来自 MQ，写明标记与响应时序。",
+        "保留 24 小时及标记写入失败仍返回投递成功；JSON 字段和值保持不变。",
+        "不增加按距离去重、额外密钥、用户策略或未经验证的收益，也不把本地润色自动发布为飞书文档。"
+      ]
+    },
+    {
+      "id": "writing-clean-repeat",
+      "request": "再次检查 design.md 是否符合 Reader and explanation guidance 和 Chinese controlled language。有明确问题才修复；没有问题就说明检查范围。不要为了产生改动而改写。",
+      "files": {
+        "design.md": "# 任务保存方案\n\n客户端需要根据响应判断任务是否已经保存。本方案采用先保存任务、再返回成功的流程。\n\n请求服务负责处理客户端请求。存储服务负责保存任务。客户端提交一个任务后，请求服务调用存储服务。存储服务确认保存成功时，请求服务返回成功。存储失败时，请求服务返回错误。\n\n以任务 A 为例，客户端先提交任务 A。请求服务把任务 A 交给存储服务。保存成功后，客户端收到成功响应。保存失败时，客户端收到错误响应。此例仅说明设计流程，不代表线上执行结果。\n"
+      },
+      "criteria": [
+        "未发现明确问题时如实说明，输入文件保持不变。",
+        "说明检查了业务背景、职责、示例、成功和失败条件以及术语，不无依据追加监控、审批或新章节。",
+        "不把清晰的条件句机械拆成碎片，不声称正式 STE 认证，也不自动创建远程报告。"
+      ]
     }
   ]
 }

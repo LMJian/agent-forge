@@ -14,9 +14,9 @@ Keep the following states separate for each diagram that matters to the delivera
 | Render inspected | The generated image/document was actually inspected for clipped labels, overlapping edges and readable layout | Mark visual inspection as not performed. Successful parsing or an image file on disk is insufficient. |
 
 Use existing supported CLI/API tools first. Read the relevant destination's format guidance before export.
-Do not auto-install a renderer, launch a browser, create a remote diagram or change sharing permissions
-to satisfy this check. Those actions require authorization under the current task's rules. Previously
-authorized tools may be used within their scope; do not ask again merely because this reference exists.
+Do not auto-install a renderer, launch a browser, publish to an additional service or change sharing
+permissions to satisfy this check. Use the chosen destination's media/diagram tools only within the
+task's authorization. Previously authorized tools may be reused within their scope.
 
 If no parser or renderer is available, deliver the requested local source and concise prose describing
 the flow. State exactly which check remains undone. If the user explicitly requires a rendered artifact,
@@ -26,6 +26,9 @@ Do not add a prose duplicate when the readable diagram already explains the same
 After a diagram changes, repeat the checks affected by that change. A receipt for an old version does
 not validate the new source. Ensure an embedded diagram and a separately delivered source agree.
 For a remote destination, use the authorized narrow readback to check warnings and the actual resource.
+Confirm the figure's position and content, not just the presence of a resource token. For an unchanged
+copied image, byte equality can establish identity with an already inspected source; it does not prove
+the current page layout was visually inspected.
 If remote rendering fails, retain the local source and report the failure without re-creating the whole document.
 
 The final report needs only the material result or gap, such as “架构图源码已生成；当前环境没有解析器，

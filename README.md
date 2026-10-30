@@ -78,14 +78,14 @@ $brownfield-recon 梳理这个仓库的请求路由、配置加载和失败处�
 
 先明确核心问题、关键决策和完整流程，再按读者需要组织章节。接口、配置、安全、异常、监控和上线作为按需检查的维度，避免机械填充固定模板。
 
-支持新建方案、设计审查和修改已有文档。修改时同步检查定义、示例、图和引用，合并重复内容；区分现状、设计目标、估算和已验证结果。交付目的地遵循用户要求和可用文档工具。
+支持新建方案、设计审查和修改已有文档。修改时同步检查定义、示例、图和引用，合并重复内容；区分现状、设计目标、估算和已验证结果。新建方案默认输出飞书文档；工具不可用、缺少授权或平台无法完成交付时，保存为本地 Markdown 并说明原因。用户明确指定的格式、原地修改位置和 Harness 产物合同优先。
 
-配套的 [章节指南](server-tech-design/references/section-guide.md)、[写作指南](server-tech-design/references/writing-style.md)、[审查清单](server-tech-design/references/review-checklist.md) 和 [可选模板](server-tech-design/references/template.md) 用于按需展开设计。
+配套的 [章节指南](server-tech-design/references/section-guide.md)、[写作指南](server-tech-design/references/writing-style.md)、[审查清单](server-tech-design/references/review-checklist.md)、[交付规则](server-tech-design/references/delivery.md) 和 [可选模板](server-tech-design/references/template.md) 用于按需展开设计。飞书交付需要回读正文、表格、代码和相关素材，不将创建成功当作一致性验证通过。
 
 加载该 Skill 后的请求示例：
 
 ```text
-$server-tech-design 根据需求和现有代码写一份本地 Markdown 技术方案，先讲清主流程和关键决策，保留必要约束。
+$server-tech-design 根据需求和现有代码写一份技术方案，先讲清主流程和关键决策，保留必要约束。
 ```
 
 ## lark-context-explore：飞书事项上下文收集

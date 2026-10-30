@@ -4,7 +4,8 @@ description: >-
   Draft, review, structure, and improve server-side technical designs (服务端技术方案 / TDD / RFC).
   Use for backend design decisions, design reviews, and making technical proposals clearer and
   more focused. Covers the core flow, contracts, relevant risks, monitoring, and rollout without
-  imposing a fixed chapter inventory. Prefer this skill over generic document writing for backend designs.
+  imposing a fixed chapter inventory. New documents default to Lark/Feishu with a Markdown fallback.
+  Prefer this skill over generic document writing for backend designs.
 ---
 
 # Server-Side Technical Design
@@ -43,6 +44,10 @@ Standalone design work does not require starting Harness.
 
 Adapt this workflow to the task. For a narrow edit, work from the existing design and check affected
 connections; do not restart discovery or require another outline approval.
+
+For a new document or a requested conversion, resolve the destination early using
+[delivery.md](references/delivery.md). Default to Lark/Feishu when available; honor explicit output
+formats and local-only constraints. Keep drafting useful content when remote delivery is unavailable.
 
 ### 1. Establish the problem and the core solution
 
@@ -118,14 +123,17 @@ Use the applicable checks in [review-checklist.md](references/review-checklist.m
 reader can restate the solution and walk the example; then inspect completeness. Fix missing reasoning
 and confusing structure, rather than adding a section solely to tick a box.
 
-Match the user's destination and operation. Default to local Markdown in the supplied output
-directory; for a new document with no specified destination, use the project's document or artifact
-directory. For an existing document, preserve its location and relevant user annotations. External
-publication is a separate action through the user's selected tool and destination. Use the
-appropriate tools for the selected destination and their supported document and diagram formats.
+Review the whole requested scope, including terms, conditions, examples and figure labels. Correct
+observed defects when corrections are requested; do not invent new findings or repeatedly rewrite a
+clean document to demonstrate effort. Stop when the requested checks and authorized corrections are complete.
+
+Deliver new design documents as Lark/Feishu documents by default. Follow
+[delivery.md](references/delivery.md) for capability checks, publication boundaries, content readback,
+and a saved local `.md` fallback. Explicit user destinations and required Harness artifact contracts
+take precedence. Preserve existing documents' locations and user annotations during in-place edits.
 Check diagrams using [diagram-checks.md](references/diagram-checks.md): report source generation,
 syntax checking and visual inspection separately. An unavailable renderer leaves an explicit verification
-gap; it does not authorize installation, GUI use or external publication. Read back final affected content.
+gap; it does not authorize installation, GUI use or unrelated publication. Read back final affected content.
 In review mode, follow [review-output.md](references/review-output.md) for evidence-backed findings,
 severity and scope. Return findings instead of rewriting or publishing the document by default.
 

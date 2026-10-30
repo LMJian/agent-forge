@@ -12,6 +12,8 @@ checklist or a sequence of “not applicable” explanations into the document u
 - [ ] One concrete example goes from input to result; relevant lifecycle transitions and failure outcomes are clear.
 - [ ] Input sources, state ownership, identity or version selection, and their effects are established where relevant.
 - [ ] Similar concepts are distinguished before use; diagrams and prose agree on responsibility and timing.
+- [ ] Data units, identifiers and failure scopes are distinct; one entity keeps its name across stages, and one term does not hide unrelated meanings.
+- [ ] Relevant input, intermediate data, downstream parameters and final output remain distinct; no later-stage result is inferred solely from an earlier handoff.
 - [ ] Each section answers a distinct question, and its position follows the design's reasoning or execution flow.
 
 ## Is the relevant design complete and evidenced?
@@ -44,5 +46,13 @@ checklist or a sequence of “not applicable” explanations into the document u
 - [ ] After changes, affected examples, diagrams, cross-references, headings, and obsolete explanations have been reconciled.
 - [ ] The final affected content has been read back; user annotations and unrelated content are preserved.
 - [ ] Chinese paragraphs follow the controlled-language rules: explicit actors, one action or judgment per sentence, complete conditions and consistent terms; simplification has not changed the contract.
+- [ ] A full writing review covers the requested scope and dependent tables, examples and labels, not only previous findings; clean material is not rewritten merely to produce changes.
 - [ ] Diagram generation, syntax checking and visual inspection have separate, accurate states; unavailable checks are reported rather than treated as passed.
 - [ ] Review findings identify location, trigger, impact, evidence and correction; stylistic suggestions are not promoted to blockers, and a clean review reports its actual scope and limits.
+
+## Does the delivered artifact match the request?
+
+- [ ] New documents use the Lark default or a justified Markdown fallback; explicit destinations, local-only constraints and required caller contracts are preserved.
+- [ ] Remote figures and file references are usable within the authorized scope; linked source material is not automatically uploaded or shared more broadly.
+- [ ] The actual delivered revision/content and relevant resources have been read back; comparison covers values and meaning rather than only block or style-node counts.
+- [ ] Unsupported, unauthorized, failed and unknown delivery outcomes are distinguished; incomplete publication or verification is reported accurately alongside the preserved draft.

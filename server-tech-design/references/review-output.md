@@ -37,7 +37,10 @@ If there are no actionable findings, say so and name the reviewed scope and mate
 Do not manufacture suggestions to make the review look substantial. No findings does not mean release
 approval, production validation or user sign-off.
 
-For standalone work, concise Markdown is sufficient. For Harness, return the findings to the wrapper
+For a standalone review without a requested report document, return concise findings in the conversation.
+If the user requests a report document, use [delivery.md](delivery.md). The Lark default for new
+documents does not turn a review-only request into publication or move an existing document.
+For Harness, return the findings to the wrapper
 using its existing `blocker` / `warning` / `suggestion` contract. Preserve `severity` and `message` when
 converting findings; put anchors and details in the message or the caller-supported fields. Include an
 explicit empty findings array for a clean review. Unresolved blockers cannot be reported as `pass`.

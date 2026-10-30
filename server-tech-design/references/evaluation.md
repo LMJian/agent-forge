@@ -33,7 +33,11 @@ model or install an evaluation runner solely to make the report look complete.
 | Actual scenario execution and semantic grading | The observed output/actions meet that scenario's criteria | Universal STE compliance, production behavior or success on untested cases |
 
 The cases cover Chinese simplification, narrow edits, review-only operation, code/design conflict,
-missing diagram tools and a clean review. Preserve the task's meaning and scope; do not reward longer
+missing diagram tools, clean reviews, whole-document consistency and delivery decisions. Delivery
+planning cases use supplied synthetic provider states, not live platform access. Grade the proposed
+destination, next action and stated completion boundary; do not call a planning walkthrough a successful
+Lark publication. No scenario authorizes real uploads merely because its simulated provider is available.
+Preserve the task's meaning and scope; do not reward longer
 documents, invented blockers, arbitrary word counts or merely mentioning the name ASD-STE100.
 
 Keep evaluation results outside the distributed Skill. A maintenance summary should distinguish

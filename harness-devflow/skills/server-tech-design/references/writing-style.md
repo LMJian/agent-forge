@@ -12,6 +12,8 @@
   再说明组件、状态和因果关系；类比只能帮助理解，不能替代准确的机制和边界。
 - 关键术语首次出现时，解释其含义及其在当前方案中的作用。已有后端基础知识无需逐一重教，
   但理解本方案所必需的特殊概念必须说明。后文沿用同一术语。
+- 先区分影响理解的对象和层次。例如，请求、事件和条目可能具有不同的数量关系、标识和失败范围。
+  同一配置对象在不同阶段保持同一名称；阶段名称只说明该对象在哪里使用。
 - 结合实际应用场景，串起输入、处理过程和结果，并说明相关失败路径。优先使用材料中已有的场景；
   为讲解构造的示例须标明是示意，不能当作真实业务事实。
 - 需要代码时，给能说明核心机制的最小示例。省略无关脚手架，保留影响理解的前提、条件和异常边界。
@@ -34,8 +36,11 @@ ASD-STE100 的正式规则和词典面向英语技术文档；本技能把上述
 
 - 首次出现时确定术语。随后保持同一名称；不同对象使用不同名称。例如，用“配置版本”和“服务版本”
   区分两种版本，不统称“版本”。已有项目术语优先，术语表仅在读者确有需要时添加。
+  检查一个词是否承担不同含义，例如内容概述与哈希值不应都简称“摘要”。保留代码中的正式名称，
+  在首次出现处说明代码名称与正文术语的对应关系。
 - 每句说明一个动作或判断。写明谁执行、在什么条件下执行、产生什么结果。一个动作有多个必要条件时，
   保留条件之间的“且”“或”“仅当”关系；拆句不能改变条件、时序、数量、否定或因果关系。
+  不把并列对象或一个判断的必要条件机械拆散。明确主体不等于每句重复同一个主语。
 - 主动语态优先。主体未知时标明未知，不为了补全句式虚构负责人、模块或决策人。
 - 保留原文的正式程度和作者语气。减少口号、空泛收益、重复总结和不必要的对比。
   用自然段解释因果，只把真正并列的项目或操作步骤列成清单。
@@ -54,6 +59,8 @@ ASD-STE100 的正式规则和词典面向英语技术文档；本技能把上述
 
 交付前逐段检查：读者能否找到动作主体；一句是否承担多个独立动作；条件是否完整；代词是否有唯一指向；
 同一对象是否始终使用同一术语；是否存在没有证据的收益。修正后再次核对技术含义。
+全文检查应覆盖正文、表格、示例和图中标签，不只复查上次列出的句子。区分明确的理解障碍与可选措辞。
+对未变化的文稿再次检查时，可以复用已有依据；没有新问题就如实报告，不为产生修改记录而改写。
 仅润色局部时检查该范围及其直接关联处，不为全篇风格统一擅自改写其他段落。
 不设机械的中文字数上限，也不把每个短句另起一行。检查过程留在内部，不向正文追加合规口号。
 
@@ -92,6 +99,10 @@ conditions and exceptions that change the behavior.
 
 Introduce terms at first use. When two names look interchangeable, explain their different jobs and
 relationship together. A small example often works better than a growing glossary.
+
+At relevant boundaries, distinguish the original input, intermediate representation, downstream
+parameters and final output. Explain material field selection and transformation where it occurs.
+Reception or forwarding alone does not prove downstream use or a user-visible result.
 
 For a configuration or interface, establish structure before examples. Use an annotated schema or a
 field table as its main reference; avoid repeating every field in both. State what comes from the key,
