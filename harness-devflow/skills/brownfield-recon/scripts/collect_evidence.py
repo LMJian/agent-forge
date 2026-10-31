@@ -7,12 +7,15 @@ import argparse
 import collections
 import datetime as dt
 import json
+import math
 import os
 from pathlib import Path
 import re
+import selectors
 import shutil
 import subprocess
 import sys
+import time
 from typing import Any, Iterable
 
 
@@ -34,29 +37,77 @@ SKIP_DIRS = {
     "__pycache__",
 }
 SENSITIVE_PART_RE = re.compile(
-    r"(^|/)(\.env(?:\.[^/]*)?|[^/]*\.env(?:\.[^/]*)?|[^/]*credential[^/]*|[^/]*private[_-]?key[^/]*|id_(?:rsa|dsa|ecdsa|ed25519)(?:\.[^/]*)?|[^/]*token[_-]?dump[^/]*|tokens?\.(?:json|txt)|[^/]*\.(?:pem|key|p12|pfx))($|/)",
+    r"(^|/)(\.env(?:\.[^/]*)?|[^/]*\.env(?:\.[^/]*)?|[^/]*credential[^/]*|[^/]*private[_-]?key[^/]*|id_(?:rsa|dsa|ecdsa|ed25519)(?:\.[^/]*)?|[^/]*token[_-]?dump[^/]*|tokens?\.(?:json|txt)|[^/]*\.(?:pem|key|p12|pfx)|\.(?:netrc|npmrc|pypirc)|\.ssh|\.aws|secrets?(?:[._-][^/]*)?\.(?:json|ya?ml|toml|ini|txt)|service[-_]account(?:[._-][^/]*)?\.json)($|/)",
     re.IGNORECASE,
 )
 GENERATED_RE = re.compile(r"(^|/)(gen|generated|kitex_gen|thrift_gen)(/|$)|\.pb\.go$", re.IGNORECASE)
 CONTRACT_SUFFIXES = {".thrift", ".proto", ".avdl", ".graphql", ".gql"}
 CONFIG_SUFFIXES = {".yaml", ".yml", ".toml", ".ini"}
 TEST_RE = re.compile(r"(^|/)(test|tests|testing)(/|$)|(_test\.|\.test\.)", re.IGNORECASE)
+DEFAULT_SEARCH_BYTES = 256 * 1024
+DEFAULT_SEARCH_SECONDS = 15.0
+VALUE_RE = re.compile(
+    r'''(?i)(\b(?:password|passwd|api[_-]?key|(?:access|client|app)[_-]?secret|secret(?:[_-]?key)?|private[_-]?key|(?:access|refresh|id)[_-]?token|token|_auth(?:Token)?|_password)\b["']?\s*[:=]\s*)("[^"\r\n]*"|'[^'\r\n]*'|[^\s,;}]+)'''
+)
+AUTH_RE = re.compile(r"(?i)\b(Bearer|Basic)\s+[A-Za-z0-9+/_.=:-]+")
+URL_AUTH_RE = re.compile(r"(?i)(https?://)[^/\s:@]+:[^/\s@]+@")
 
 
-def run(cmd: list[str], cwd: Path, timeout: int = 30) -> tuple[int, str, str]:
+def redact(text: str) -> str:
+    text = AUTH_RE.sub(r"\1 [REDACTED]", text)
+    text = URL_AUTH_RE.sub(r"\1[REDACTED]@", text)
+    return VALUE_RE.sub(lambda match: match[1] + "[REDACTED]", text)
+
+
+def run(cmd: list[str], cwd: Path, timeout: float = 30,
+        max_output_bytes: int = 1024 * 1024) -> tuple[int, str, str]:
+    """Drain both pipes with byte/deadline limits, before materializing output.
+
+    124/125/127 distinguish timeout, output-budget exhaustion and launch failure.
+    Callers must not treat their partial stdout as a complete negative result.
+    """
+    output, errors = bytearray(), bytearray()
+    proc = None
     try:
-        proc = subprocess.run(
-            cmd,
-            cwd=str(cwd),
-            text=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            timeout=timeout,
-            check=False,
-        )
-        return proc.returncode, proc.stdout, proc.stderr
-    except (OSError, subprocess.TimeoutExpired) as exc:
-        return 127, "", str(exc)
+        proc = subprocess.Popen(cmd, cwd=str(cwd), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        deadline = time.monotonic() + timeout
+        code, reason = None, ""
+        with selectors.DefaultSelector() as poll:
+            poll.register(proc.stdout, selectors.EVENT_READ, (output, max_output_bytes))
+            poll.register(proc.stderr, selectors.EVENT_READ, (errors, 16 * 1024))
+            while poll.get_map():
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    code, reason = 124, "command timeout"
+                    break
+                for key, _ in poll.select(min(remaining, 0.1)):
+                    target, limit = key.data
+                    chunk = os.read(key.fd, min(65536, limit - len(target) + 1))
+                    if not chunk:
+                        poll.unregister(key.fileobj)
+                    elif len(target) + len(chunk) > limit:
+                        target.extend(chunk[:limit - len(target)])
+                        code, reason = 125, "command output byte budget exhausted"
+                        break
+                    else:
+                        target.extend(chunk)
+                if code is not None:
+                    break
+        if code is None:
+            try:
+                code = proc.wait(timeout=max(0.001, deadline - time.monotonic()))
+            except subprocess.TimeoutExpired:
+                code, reason = 124, "command timeout"
+        return code, output.decode("utf-8", errors="replace"), redact(errors.decode("utf-8", errors="replace") + reason)
+    except OSError as exc:
+        return 127, "", redact(str(exc))
+    finally:
+        if proc is not None:
+            if proc.poll() is None:
+                proc.kill()
+            proc.wait()
+            proc.stdout.close()
+            proc.stderr.close()
 
 
 def is_sensitive(rel: str) -> bool:
@@ -246,40 +297,46 @@ def git_evidence(root: Path, base_ref: str | None, max_commits: int, limit: int,
         warnings.append("not a Git worktree; Git history unavailable")
         return {"available": False}
 
-    _, branch, _ = run(["git", "branch", "--show-current"], root)
-    _, head, _ = run(["git", "rev-parse", "HEAD"], root)
-    _, status, _ = run(["git", "status", "--short"], root)
-    _, log_text, log_err = run(
-        ["git", "log", f"-{max_commits}", "--date=iso-strict", "--format=%H%x1f%ad%x1f%an%x1f%s"], root
-    )
-    if log_err.strip():
-        warnings.append(f"git log warning: {log_err.strip()}")
+    failures = []
+
+    def query(label: str, args: list[str], timeout: float = 30) -> str:
+        code, text, error = run(["git", *args], root, timeout=timeout)
+        if code:
+            failures.append({"operation": label, "returncode": code})
+            warnings.append(f"git {label} incomplete: {error.strip() or f'rc={code}'}")
+        return text if code == 0 else ""
+
+    branch = query("branch", ["branch", "--show-current"])
+    head = query("head", ["rev-parse", "HEAD"])
+    status = query("status", ["status", "--short"])
+    log_text = query("recent history", ["log", f"-{max_commits}", "--date=iso-strict", "--format=%H%x1f%ad%x1f%an%x1f%s"])
 
     base = detect_base_ref(root, base_ref, warnings)
     diff_files: list[dict[str, str]] = []
     diff_stat = ""
-    # Fix #3: use merge-base (three-dot) semantics consistently for both the
-    # name/stat diff and the churn window, so all branch-diff numbers agree.
+    # git log A...B is symmetric history; git diff A...B is not. Resolve the
+    # merge base, then use only its descendants on HEAD for branch evidence.
     churn_range = f"-{max_commits}"
     diff_semantics = "recent-commit-window"
+    merge_base = ""
     if base:
-        rc, names, err = run(["git", "diff", "--name-status", f"{base}...HEAD"], root)
-        if rc == 0:
+        merge_base = query("merge base", ["merge-base", base, "HEAD"]).strip()
+        if merge_base:
+            branch_range = f"{merge_base}..HEAD"
+            names = query("diff names", ["diff", "--name-status", branch_range])
             for line in names.splitlines():
                 parts = line.split("\t")
                 if len(parts) >= 2:
                     diff_files.append({"status": parts[0], "path": parts[-1]})
-        elif err.strip():
-            warnings.append(f"git diff names failed: {err.strip()}")
-        _, diff_stat, _ = run(["git", "diff", "--stat", f"{base}...HEAD"], root)
-        churn_range = f"{base}...HEAD"
-        diff_semantics = "merge-base (three-dot) vs HEAD"
+            diff_stat = query("diff stat", ["diff", "--stat", branch_range])
+            churn_range = branch_range
+            diff_semantics = "merge-base to HEAD (two-dot range after resolution)"
+        else:
+            diff_semantics = "unavailable: merge base could not be resolved"
 
-    _, numstat, _ = run(["git", "log", "--numstat", "--format=", churn_range], root, timeout=60)
-    _, base_commit, _ = run(["git", "rev-parse", "--verify", f"{base}^{{commit}}"], root) if base else (0, "", "")
-    rc, working, err = run(["git", "diff", "HEAD", "--name-status"], root)
-    if rc != 0:
-        warnings.append(f"working-tree diff unavailable: {err.strip()}")
+    numstat = query("hotspots", ["log", "--numstat", "--format=", churn_range], timeout=60) if not base or merge_base else ""
+    base_commit = query("base commit", ["rev-parse", "--verify", f"{base}^{{commit}}"] ) if base else ""
+    working = query("working-tree diff", ["diff", "HEAD", "--name-status"])
     working_files = []
     for line in working.splitlines():
         parts = line.split("\t")
@@ -292,6 +349,10 @@ def git_evidence(root: Path, base_ref: str | None, max_commits: int, limit: int,
         "head": head.strip(),
         "base_ref": base,
         "base_commit": base_commit.strip() or None,
+        "base_resolution": "fallback" if base_ref and base_ref != base else "exact" if base_ref else "auto",
+        "merge_base_commit": merge_base or None,
+        "complete": not failures,
+        "command_errors": failures,
         "working_tree_diff_semantics": "tracked index and worktree vs HEAD; see dirty_paths for untracked files",
         "working_tree_diff_files": working_files[:limit],
         "working_tree_diff_truncated": max(0, len(working_files) - limit),
@@ -313,63 +374,128 @@ def keyword_hits(
     warnings: list[str],
     fixed: bool = True,
     files: list[str] | None = None,
+    searches: dict[str, Any] | None = None,
+    byte_budget: int = DEFAULT_SEARCH_BYTES,
+    search_timeout: float = DEFAULT_SEARCH_SECONDS,
 ) -> dict[str, list[dict[str, Any]]]:
+    """Keep legacy hits while exposing coverage/outcomes in a separate mapping."""
     results: dict[str, list[dict[str, Any]]] = {}
+    searches = searches if searches is not None else {}
     if not keywords:
         return results
     if not shutil.which("rg"):
         warnings.append("rg unavailable; keyword content search skipped")
+        for keyword in keywords:
+            results[keyword] = []
+            searches[keyword] = {"status": "unavailable", "complete": False,
+                                 "error_kind": "missing_tool", "completed_files": 0,
+                                 "returned_matches": 0, "reason_codes": ["missing_rg"]}
         return results
     selected = list_files(root, warnings) if files is None else files
     # Never scan the repository root and filter secrets after reading them. Pass
     # only the approved regular files, in bounded batches, to the search process.
     safe_files = []
-    oversized = 0
+    skipped = {"filtered_or_missing": 0, "oversized": 0}
     for path in selected:
         if not source_file_allowed(root, path):
+            skipped["filtered_or_missing"] += 1
             continue
         try:
             # rg may ignore --max-filesize for explicit file arguments.
             if (root / path).stat().st_size > 2 << 20:
-                oversized += 1
+                skipped["oversized"] += 1
                 continue
         except OSError:
             warnings.append(f"source disappeared before search: {path}")
+            skipped["filtered_or_missing"] += 1
             continue
         safe_files.append(path)
-    if oversized:
-        warnings.append(f"{oversized} source files exceed 2 MiB; content search skipped them")
+    if skipped["oversized"]:
+        warnings.append(f"{skipped['oversized']} source files exceed 2 MiB; content search skipped them")
     for keyword in keywords:
         hits: list[dict[str, Any]] = []
-        truncated = False
+        started = time.monotonic()
+        reasons = [f"skipped_{key}" for key, count in skipped.items() if count]
+        output_bytes, completed_files, attempted_files = 0, 0, 0
+        error_kind, error_text = None, None
         for offset in range(0, len(safe_files), 32):
+            remaining_time = search_timeout - (time.monotonic() - started)
+            if remaining_time <= 0:
+                error_kind = "timeout"
+                reasons.append("time_budget")
+                break
+            if output_bytes >= byte_budget:
+                reasons.append("byte_budget")
+                break
             batch = safe_files[offset:offset + 32]
             cmd = ["rg", "--json", "--no-config", "--max-filesize", "2M",
                    "--max-count", str(max_hits + 1)]
             if fixed:
                 cmd.append("-F")
             cmd.extend(["--", keyword, *batch])
-            rc, out, err = run(cmd, root, timeout=45)
-            if rc not in (0, 1):
-                warnings.append(f"keyword search failed for {keyword!r}: {err.strip() or f'rc={rc}'}")
-                break
+            attempted_files += len(batch)
+            rc, out, err = run(cmd, root, timeout=remaining_time,
+                               max_output_bytes=byte_budget - output_bytes)
+            output_bytes += min(len(out.encode("utf-8")), byte_budget - output_bytes)
+            ended = set()
             for line in out.splitlines():
-                event = json.loads(line)
-                if event.get("type") != "match":
+                try:
+                    event = json.loads(line)
+                except ValueError:
+                    if rc not in (124, 125):
+                        error_kind, error_text = "invalid_output", "rg returned malformed JSON"
+                    break  # A budget may cut the final JSON event in the middle.
+                if not isinstance(event, dict):
+                    error_kind, error_text = "invalid_output", "rg returned a non-object event"
+                    break
+                kind, data = event.get("type"), event.get("data")
+                if kind in {"match", "end"} and (not isinstance(data, dict) or not isinstance(data.get("path"), dict)):
+                    error_kind, error_text = "invalid_output", "rg event has no valid path"
+                    break
+                if kind == "end":
+                    ended.add(data["path"].get("text"))
+                if kind != "match":
                     continue
-                data = event["data"]
+                if not isinstance(data.get("lines"), dict) or not isinstance(data.get("line_number"), int):
+                    error_kind, error_text = "invalid_output", "rg match has no valid line"
+                    break
                 path, text = data["path"].get("text"), data["lines"].get("text")
                 if path is None or text is None:
+                    reasons.append("non_text_event")
                     continue
                 if len(hits) >= max_hits:
-                    truncated = True
+                    reasons.append("hit_limit")
                     break
-                hits.append({"path": path, "line": data["line_number"], "text": text.rstrip("\r\n")[:500]})
-            if len(hits) >= max_hits:
-                truncated = truncated or offset + len(batch) < len(safe_files)
+                hits.append({"path": path, "line": data["line_number"], "text": redact(text.rstrip("\r\n"))[:500]})
+            completed_files += len(batch) if rc in (0, 1) else len(ended - {None})
+            if rc == 125:
+                reasons.append("byte_budget")
+            elif rc == 124:
+                error_kind, error_text = "timeout", "query exceeded its time budget"
+                reasons.append("time_budget")
+            elif rc not in (0, 1):
+                error_kind = "missing_tool" if rc == 127 else "command_error"
+                error_text = redact(err.strip())[:300] or f"rc={rc}"
+            if error_kind or rc not in (0, 1):
                 break
-        if truncated:
-            warnings.append(f"keyword {keyword!r} reached the {max_hits}-hit sample limit; matches or files remain unexamined")
+            if len(hits) >= max_hits:
+                if offset + len(batch) < len(safe_files):
+                    reasons.append("hit_limit")
+                break
+        reasons = sorted(set(reasons))
+        complete = not reasons and error_kind is None
+        status = ("unavailable" if error_kind == "missing_tool" else "error" if error_kind else
+                  "partial" if not complete else "matched" if hits else "no_match")
+        searches[keyword] = {"status": status, "complete": complete,
+                             "error_kind": error_kind, "error": error_text,
+                             "candidate_files": len(selected), "eligible_files": len(safe_files),
+                             "attempted_files": attempted_files, "completed_files": completed_files,
+                             "skipped_files": dict(skipped), "returned_matches": len(hits),
+                             "reason_codes": reasons, "output_bytes": output_bytes,
+                             "byte_budget": byte_budget, "time_budget_seconds": search_timeout,
+                             "elapsed_seconds": round(time.monotonic() - started, 3)}
+        if not complete:
+            warnings.append(f"keyword {redact(keyword)!r} {status}: {error_text or ', '.join(reasons)}; not proof of absence")
         results[keyword] = hits
     return results
 
@@ -472,6 +598,10 @@ def parse_args() -> argparse.Namespace:
         help="Regex keyword (rg without -F); use after learning local naming; repeatable",
     )
     parser.add_argument("--max-hits", type=int, default=50, help="Maximum content hits per keyword")
+    parser.add_argument("--search-byte-budget", type=int, default=DEFAULT_SEARCH_BYTES,
+                        help="Maximum raw stdout bytes per keyword, across all batches")
+    parser.add_argument("--search-timeout", type=float, default=DEFAULT_SEARCH_SECONDS,
+                        help="Total seconds per keyword, across all batches")
     parser.add_argument("--max-commits", type=int, default=40, help="Recent commits and fallback churn window")
     parser.add_argument("--limit", type=int, default=80, help="Maximum items per bounded inventory section")
     parser.add_argument("--output", default="-", help="JSON output path, or - for stdout")
@@ -484,8 +614,9 @@ def main() -> int:
     if not root.is_dir():
         print(f"repository root does not exist: {root}", file=sys.stderr)
         return 2
-    if args.max_hits < 1 or args.max_commits < 1 or args.limit < 1:
-        print("max-hits, max-commits, and limit must be positive", file=sys.stderr)
+    if (min(args.max_hits, args.max_commits, args.limit, args.search_byte_budget, args.search_timeout) <= 0
+            or not math.isfinite(args.search_timeout)):
+        print("limits and search budgets must be positive", file=sys.stderr)
         return 2
 
     try:
@@ -505,6 +636,7 @@ def main() -> int:
         return 2
     warnings: list[str] = []
     files = list_files(root, warnings, scopes)
+    fixed_searches, regex_searches = {}, {}
     payload = {
         "schema_version": SCHEMA_VERSION,
         "generated_at": dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat(),
@@ -518,11 +650,16 @@ def main() -> int:
             "max_hits": args.max_hits,
             "max_commits": args.max_commits,
             "limit": args.limit,
+            "search_byte_budget": args.search_byte_budget,
+            "search_timeout": args.search_timeout,
         },
         "inventory": inventory(files),
         "candidates": classify(files, args.limit),
-        "keyword_hits": keyword_hits(root, args.keyword, args.max_hits, warnings, fixed=True, files=files),
-        "regex_keyword_hits": keyword_hits(root, args.regex_keyword, args.max_hits, warnings, fixed=False, files=files),
+        "keyword_hits": keyword_hits(root, args.keyword, args.max_hits, warnings, fixed=True, files=files,
+                                     searches=fixed_searches, byte_budget=args.search_byte_budget, search_timeout=args.search_timeout),
+        "regex_keyword_hits": keyword_hits(root, args.regex_keyword, args.max_hits, warnings, fixed=False, files=files,
+                                           searches=regex_searches, byte_budget=args.search_byte_budget, search_timeout=args.search_timeout),
+        "searches": {"fixed": fixed_searches, "regex": regex_searches},
         "git": git_evidence(root, args.base_ref, args.max_commits, args.limit, warnings),
         "knowledge": knowledge_evidence(root, args.limit, args.knowledge_root),
         "devflow": devflow_evidence(root, args.limit, warnings),
@@ -532,6 +669,7 @@ def main() -> int:
             "skipped_directories": sorted(SKIP_DIRS),
             "sensitive_name_filter": SENSITIVE_PART_RE.pattern,
             "content_search": "prefiltered regular files only; no symlinks; at most 2 MiB per file",
+            "snippet_redaction": "credential assignments, Basic/Bearer credentials and URL userinfo; not a declassification guarantee",
         },
     }
     rendered = json.dumps(payload, ensure_ascii=False, indent=2) + "\n"

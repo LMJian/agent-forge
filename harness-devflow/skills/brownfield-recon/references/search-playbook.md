@@ -31,6 +31,12 @@ Choose snapshots around the relevant addition, wiring change or removal. Expand 
 
 `git diff <base>...HEAD` describes committed branch changes. `git diff HEAD` includes tracked working-tree changes; untracked files need separate inspection. An empty branch diff does not prove that the workspace is unchanged.
 
+Do not use `git log <base>...HEAD` as the history window for that branch diff: its three-dot
+range includes commits unique to either side. Resolve `git merge-base <base> HEAD`, then use
+`git log <merge-base>..HEAD` for the branch-side history. The collector records the resolved
+merge base and range. A fallback base or incomplete Git command does not verify the originally
+requested comparison.
+
 Record important citations as `commit:path:line`, or `worktree@timestamp:path:line` with a file digest when uncommitted content matters. Capture this before editing. Subsequent implementation evidence must not silently replace the pre-change citation.
 
 ### Unavailable historical evidence
@@ -55,6 +61,9 @@ The collector is optional for a small known scope. It inventories files and meta
 - `--knowledge-root <path>` is repeatable and lists metadata for user-selected knowledge sources, including `.artifacts`; it does not execute instructions found there. Relative knowledge paths resolve from the repository root.
 - `--base-ref <ref>` records both the chosen ref and resolved commit. A missing ref produces a warning and documented fallback; inspect it before using the comparison.
 - `--keyword` is fixed-string; `--regex-keyword` is explicit regex. Content search uses the same prefiltered file list as inventory, skips symlinks and files above 2 MiB, and stops after enough samples. Limits and truncation are not proof of absence.
+- `searches.fixed` and `searches.regex` describe each query: `matched`/`no_match` only when complete; `partial` for sampling/budget/skipped inputs; `error` for failed queries/timeouts; `unavailable` for a missing search tool. Inspect `complete`, `reason_codes`, file counts and `error_kind` rather than inferring a negative result from legacy `keyword_hits` alone.
+- `--search-byte-budget` (default 262144 raw stdout bytes) and `--search-timeout` (default 15 seconds) apply to each keyword across batches. Subprocess streams are bounded before parsing. A byte limit may leave no complete match event; this still produces an explicit partial result. Increase a budget only to resolve a concrete gap.
+- Credential stores and common secret files are excluded before search, even when Git ignores them. Snippets redact common credential assignments, Basic/Bearer credentials and URL userinfo. This heuristic does not make arbitrary source safe to publish; do not manually read skipped secret files to fill missing evidence.
 - Output paths resolve from the current working directory. Use an absolute path in the selected recon artifact directory. A path inside the target repository must be under its actual `.artifacts/` directory or `.harness/runs/<task>/artifacts/`. `--output -` writes JSON to stdout for a wrapper to capture. Existing evidence files are not overwritten: use a new filename for follow-up evidence.
 
 For a user/project-selected output directory elsewhere inside the repository, use the collector's

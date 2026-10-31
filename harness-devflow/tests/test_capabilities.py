@@ -51,13 +51,15 @@ class CapabilityTests(RepoCase):
         self.write("link.py", "not used\n")
         (self.root / "link.py").unlink()
         (self.root / "link.py").symlink_to(self.root / "base.py")
+        self.write("secrets.yaml", "SUPER_SECRET_FIXTURE=do-not-collect\n")
         use = self.recon()
-        receipt = runner.run(self.flow, "capability", "recon", scopes=["base.py", "tests"], keywords=["value"])
+        receipt = runner.run(self.flow, "capability", "recon", scopes=["."], keywords=["value", "SUPER_SECRET_FIXTURE"])
         self.assertEqual(receipt["status"], "passed", receipt)
         data = read_json(Path(receipt["stdout"]))
         self.assertEqual(data["schema_version"], "brownfield-recon-evidence-v1")
         self.assertIn(".harness", data["safety"]["skipped_directories"])
-        self.assertNotIn("SUPER_SECRET_FIXTURE", json.dumps(data))
+        self.assertNotIn("do-not-collect", json.dumps(data))
+        self.assertEqual(data["keyword_hits"]["SUPER_SECRET_FIXTURE"], [])
         self.assertEqual(data["parameters"]["base_ref"], use["head"])
         path = self.result(use, details={"phase": "design", "readiness": "READY_WITH_GAPS"}, tool_runs=[receipt["id"]])
         capabilities.complete(self.flow, "recon", str(path))
@@ -133,6 +135,62 @@ class CapabilityTests(RepoCase):
         self.write("base.py", "def value():\n    return 2\n")
         with self.assertRaisesRegex(HarnessError, "Code changed"):
             capabilities.complete(self.flow, "recon", str(self.result(use, details={"phase": "design", "readiness": "READY"})))
+
+    def test_scoped_recon_survives_unrelated_changes_and_head_movement(self):
+        use = self.recon()
+        self.write("unrelated.py", "unrelated = True\n")
+        self.commit("Unrelated source change")
+        receipt = runner.run(self.flow, "capability", "recon", scopes=["base.py"], keywords=["value"])
+        self.assertEqual(receipt["status"], "passed")
+        path = self.result(use, details={"phase": "design", "readiness": "READY",
+                                        "evidence_paths": ["base.py", "tests"]}, tool_runs=[receipt["id"]])
+        done = capabilities.complete(self.flow, "recon", str(path))
+        self.assertEqual(done["recon_scopes"], ["base.py", "tests"])
+        self.assertEqual(self.intake()["current_stage"], "design")
+
+    def test_direct_inspection_can_declare_scope_without_collector(self):
+        use = self.recon()
+        self.write("unrelated.py", "unrelated = True\n")
+        done = capabilities.complete(self.flow, "recon", str(self.result(use, details={
+            "phase": "design", "readiness": "READY", "evidence_paths": ["base.py"]})))
+        self.assertEqual(done["recon_scopes"], ["base.py"])
+
+    def test_metadata_only_commit_does_not_invalidate_default_recon(self):
+        use = self.recon()
+        self.git("commit", "--allow-empty", "-m", "Metadata only")
+        done = capabilities.complete(self.flow, "recon", str(self.result(use, details={
+            "phase": "design", "readiness": "READY"})))
+        self.assertEqual(done["recon_scopes"], ["."])
+
+    def test_scope_cannot_hide_an_earlier_collected_dependency(self):
+        use = self.recon()
+        runner.run(self.flow, "capability", "recon", scopes=["base.py", "tests"], keywords=["value"])
+        self.write("tests/test_base.py", "changed = True\n")
+        with self.assertRaisesRegex(HarnessError, "Code changed"):
+            capabilities.complete(self.flow, "recon", str(self.result(use, details={
+                "phase": "design", "readiness": "READY", "evidence_paths": ["base.py"]})))
+
+    def test_new_file_in_directory_scope_invalidates_recon(self):
+        use = self.recon()
+        runner.run(self.flow, "capability", "recon", scopes=["tests"], keywords=["value"])
+        self.write("tests/new_dependency.py", "new_contract = True\n")
+        with self.assertRaisesRegex(HarnessError, "Code changed"):
+            capabilities.complete(self.flow, "recon", str(self.result(use, details={"phase": "design", "readiness": "READY"})))
+
+    def test_deleted_input_and_changes_before_stage_handoff_are_rejected(self):
+        use = self.recon()
+        capabilities.complete(self.flow, "recon", str(self.result(use, details={
+            "phase": "design", "readiness": "READY", "evidence_paths": ["base.py"]})))
+        (self.root / "base.py").unlink()
+        with self.assertRaisesRegex(HarnessError, "Code changed"):
+            self.intake()
+
+    def test_scope_paths_are_validated(self):
+        use = self.recon()
+        for paths in ["base.py", ["../outside"], [str(self.root / "base.py")], ["not-a-source-input"]]:
+            with self.assertRaises(HarnessError):
+                capabilities.complete(self.flow, "recon", str(self.result(use, details={
+                    "phase": "design", "readiness": "READY", "evidence_paths": paths})))
 
     def test_explicit_missing_provider_does_not_fall_back_or_skip(self):
         self.flow.configure_flow({"capabilities": {"recon": "missing-method"}}, "Use the explicitly requested method")

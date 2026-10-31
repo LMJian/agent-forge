@@ -94,6 +94,31 @@ For a protocol/dependency change, make this comparison early; a small table in `
 
 Check relevant schema/types, routing/version mappings and semantics used by the consumer. Branch names, newer timestamps or the presence of the new symbol do not prove that existing capabilities remain. An unavailable candidate contract stays unverified; describe any required version combination as a target, not an already available release. Compilation can establish symbol compatibility when run, but does not replace semantic checks or prove deployment.
 
+## Optional context for runtime or cross-repository claims
+
+Attach only the context needed to reproduce a consequential observation. A small row per claim
+or compact prose is sufficient; do not create a second report for these fields.
+
+| Context | Record when applicable |
+| --- | --- |
+| Claim and evidence level | What was observed; source inspected / local test / verified externally / inference / unknown |
+| Source identity | Consumer commit or worktree digest, pinned SDK, producer IDL revision and relevant configuration revision |
+| Runtime identity | Actual deployed version and target service/PSM; keep requested and observed values distinct |
+| Routing and request | Region, lane/environment, IDC or cluster, method and LogID/trace ID; mark unavailable values unknown |
+| Observation and coverage | Time with timezone, query time window/filter, complete or partial coverage, timeout/permission/parser limitations |
+| Reuse boundary | Which code/configuration/deployment changes require refreshing this claim |
+
+For example, authorization initialization returning 200 proves that initialization completed;
+it does not prove that token exchange, identity persistence or a downstream callback completed.
+An empty query with unknown/partial coverage cannot establish that a service received no request.
+Record the source result and its coverage instead of replacing it with an absence claim. Do not
+include tokens, app secrets, authorization codes or unnecessary user identifiers in this context.
+
+For Harness results, `details.evidence_paths` lists repository-relative inspected source paths
+and dependencies. Collection scopes are already included and cannot be removed by a narrower
+result. Directory scopes detect new and deleted inputs. If no scope is declared, freshness checks
+remain conservative. Source input freshness does not refresh the runtime observations above.
+
 ## Readiness and remaining questions
 
 When evaluating readiness, name the phase: design, implementation, integration or release. Apply `READY`, `READY_WITH_GAPS` or `BLOCKED` to that phase only. List later phases as pending when they were not evaluated. For a factual investigation without a next-phase decision, describe what is established and uncertain instead of inventing a phase or blocking on an unchosen future design.

@@ -15,7 +15,7 @@ Resolve scripts and references relative to this SKILL.md. The same method and re
 - **Target behavior:** follow the user's latest instructions and accepted design. Record its source/version. A planned change from existing code is not a documentation defect; stale descriptions of current behavior are.
 - Read applicable repository instructions. Reuse scope and authorization already established in the conversation. Ask only when an unresolved fact would materially change implementation or its safety.
 - Investigation is read-only apart from the selected local recon artifacts. It does not authorize changes to business code, knowledge pages or remote systems. If the user already requested implementation, continue that authorized work after recon; do not seek approval again merely because this skill's investigation is finished.
-- Exclude likely secret files before content search, including `.env*`, credentials, private keys and token dumps. Do not follow symlinks into unrelated or sensitive locations.
+- Exclude likely secret files before content search, including `.env*`, credential stores, package-manager credentials, secret configuration, service-account keys, private keys and token dumps. Do not follow symlinks into unrelated or sensitive locations. Collector snippets redact common credential values; this is not permission to publish raw evidence or a guarantee that arbitrary secrets are recognized.
 
 ## Establish the question and boundary
 
@@ -42,6 +42,8 @@ Trace each affected behavior through its caller/entrypoint, implementation, rele
 
 When a protocol or cross-repository dependency will change, compare the consumer's pinned version with the candidate version early. Record the requested additions and existing capabilities the consumer must retain; verify schema/types, mappings and relevant semantics, not only version numbers or the new symbol. Do not assume a newer or feature-named branch contains changes from another branch. See the compact contract comparison in [report-contract.md](references/report-contract.md).
 
+For live or cross-repository conclusions, bind the claim to the relevant source/SDK and deployed version, observed environment/routing, request identity (for example a LogID), capture time and query coverage. Use the optional runtime context in [report-contract.md](references/report-contract.md); omit irrelevant fields. A local source fingerprint cannot establish that a remote deployment or route is still unchanged.
+
 When preparing a change, record what will be **retained, replaced or removed**, along with the reason and the behavior to verify. Tests that encode the old design may need replacement; tests of required correctness and safety remain useful.
 
 Read [search-playbook.md](references/search-playbook.md) when deeper tracing, historical reconstruction or a remote contract requires it. Use Git history to answer a concrete question, not as a mandatory tour of every affected file. Generated code can identify a dependency but is not its sole contract owner.
@@ -56,7 +58,9 @@ python3 <absolute-skill-dir>/scripts/collect_evidence.py \
   --output <absolute-artifact-dir>/baseline-evidence.json
 ```
 
-Omit optional arguments that do not apply. Check `warnings`, resolved `git.base_commit`, and `git.diff_semantics`. Branch diffs exclude uncommitted edits; inspect the separate working-tree fields. The collector identifies candidate files and samples, not verified behavioral conclusions. Do not rerun it just to fill a template.
+Omit optional arguments that do not apply. Check `warnings`, structured `searches` outcomes/coverage, resolved `git.base_commit`/`merge_base_commit`, and `git.diff_semantics`. Empty legacy hit lists are not proof of absence when a query is incomplete, failed or unavailable. Branch diffs exclude uncommitted edits; inspect the separate working-tree fields. The collector identifies candidate files and samples, not verified behavioral conclusions. Do not rerun it just to fill a template.
+
+In Harness, collection scopes accumulate. Add directly inspected callers, configuration and contract paths in the result's `details.evidence_paths`; the runtime validates their bytes against the prepared snapshot, including added/deleted files inside declared directories. Omitted scopes conservatively cover the whole input set. Do not narrow scope to hide a changed dependency. Unrelated edits and metadata-only HEAD changes can reuse a scoped baseline; review/delivery retain their own whole-repository checks.
 
 ## Stop when the next step is supported
 
@@ -87,5 +91,7 @@ Before editing code, capture a minimal baseline: source revision/state, importan
 Make that report usable in a new session: include repository identity, task and affected paths, actual branch, source revision and relevant uncommitted state, capture time, and evidence limits; include readiness when a next phase is being assessed. Link only companion artifacts that actually exist, using paths relative to the report. A collector JSON file supplies inventory, not this handoff or a readiness judgment.
 
 Keep pre-change facts separate from target decisions and implementation results. During development, append new discoveries with their evidence; record final tests separately. Do not rewrite the original baseline into a description of the completed change.
+
+When maintaining this Skill, use [behavioral evaluation](references/evaluation.md) to check investigation decisions as well as collector/runtime regressions. Ordinary recon does not require running the maintainer evaluation suite.
 
 Lead the user-facing answer with the conclusion and decisive evidence, followed by consequential uncertainty. Link an existing report for the detailed history instead of repeating it. For a development handoff, also provide the report entry path relative to the consumer repository (or explicit external location), baseline revision, phase-specific readiness, disposition and relevant validation cases. A downstream design Skill can discover the report under the artifact root (`.artifacts/` or `.harness/runs/<task>/artifacts/`) without conversation memory; under Harness, list it in the capability result's `artifacts`. Do not require another Skill installation just to produce the report. If implementation was requested, this is a progress update and input to the work, not a reason to stop the task. An applicable external workflow retains its own gates; recon neither approves nor advances them.

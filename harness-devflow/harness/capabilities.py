@@ -122,12 +122,22 @@ def prepare(workflow, slot: str, reason: str) -> dict:
                                    "Return findings/artifacts; the Harness stage wrapper owns state and report conversion",
                                    "Reuse referenced baselines and scenarios; investigate only changed or unresolved facts"]}
         request_path = directory / "request.json"
+        input_snapshot = None
+        if slot == "recon":
+            from . import recon_inputs
+            input_snapshot = directory / "inputs.json"
+            atomic_json(input_snapshot, recon_inputs.snapshot(workflow.root))
+            request["recon_input_snapshot"] = str(input_snapshot)
+            request["constraints"].append("Declare collected and directly inspected dependency paths in details.evidence_paths; omitted scopes conservatively cover all inputs")
         atomic_json(request_path, request)
         use = {"id": uid, "slot": slot, "stage": stage, "epoch": item["epoch"], **selected,
                "reason": reason, "status": "prepared", "prepared_at": now(), "source_digest": source_digest,
                "skill_path": str(directory / "source" / "SKILL.md"), "request": str(request_path),
                "output_directory": str(output), "source_evidence": snapshots(workflow.root, [*copied, str(request_path)]),
                "fingerprint": vcs.fingerprint(workflow.root), "head": request["head"], "history": []}
+        if input_snapshot:
+            use.update(recon_input_snapshot=str(input_snapshot), recon_scopes=[])
+            use["source_evidence"].extend(snapshots(workflow.root, [str(input_snapshot)]))
         state.setdefault("capability_uses", []).append(use)
         item.setdefault("capabilities", {})[slot] = uid
         workflow.save(state, "capability_prepared", slot=slot, provider=use["provider"], source_digest=source_digest)
@@ -164,7 +174,8 @@ def complete(workflow, slot: str, source: str) -> dict:
             readiness = details.get("readiness")
             require(isinstance(readiness, str) and readiness in {"READY", "READY_WITH_GAPS", "BLOCKED"}, "Invalid recon readiness")
             require((readiness == "BLOCKED") == (report["status"] == "blocked"), "Readiness and capability status disagree")
-            require(use["fingerprint"] == vcs.fingerprint(workflow.root), "Code changed during baseline investigation; reopen intake")
+            from . import recon_inputs
+            recon_inputs.verify(workflow.root, use, details.get("evidence_paths", []), record=True)
         for previous in use["history"]:
             verify_snapshots(workflow.root, previous["evidence"])
         if use.get("evidence"):
@@ -208,6 +219,9 @@ def stage_evidence(workflow, state: dict, stage: str, report: dict) -> list[str]
                     "Stage report must incorporate the professional review findings")
         if stage == "review" and not builtin:
             require(use["result_fingerprint"] == vcs.fingerprint(workflow.root), "Code changed after capability review; reopen review")
+        if use["slot"] == "recon" and not builtin:
+            from . import recon_inputs
+            recon_inputs.verify(workflow.root, use)
     return evidence
 
 
@@ -223,9 +237,10 @@ def finish_builtin(workflow, state: dict, stage: str, source: str, report: dict)
 def collector_spec(workflow, state: dict, scopes: list[str], keywords: list[str]) -> tuple[dict, dict]:
     use = active_use(workflow, state, "recon")
     require(use["status"] == "prepared" and use["provider"] == "brownfield-recon", "Collector requires a prepared brownfield-recon capability")
-    require(use["fingerprint"] == vcs.fingerprint(workflow.root), "Baseline code changed; reopen intake")
     strings(scopes, "scopes", empty=True)
     strings(keywords, "keywords", empty=True)
+    from . import recon_inputs
+    recon_inputs.verify(workflow.root, use, scopes or ["."], record=True)
     script = inside(workflow.root, Path(use["skill_path"]).parent / "scripts/collect_evidence.py")
     require(script.is_file(), "The selected skill has no bundled collector")
     argv = [sys.executable, str(script), "--repo-root", str(workflow.root), "--base-ref", use["head"], "--output", "-"]

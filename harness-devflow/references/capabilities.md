@@ -126,6 +126,19 @@ files and symlinks are excluded by the collector. Direct standalone output also 
 
 ## Reuse and recovery
 
+Prepared recon records a content snapshot independently of HEAD. `collect-recon --scope` paths
+accumulate; add directly inspected callers/configuration/contracts with `details.evidence_paths`
+in the result. Directory scopes include added/deleted files. Unrelated edits and content-preserving
+commits can reuse the baseline, but changes to any previously collected or declared dependency
+require refreshing the affected baseline. Without declared scopes, all captured inputs are checked.
+Existing prepared invocations without input snapshots retain their original conservative check.
+Review and delivery still use whole-repository fingerprints. This local input check does not
+refresh remote deployment/routing observations; retain their own time and evidence context.
+
+Collector receipts show that the tool ran. Inspect the inventory's structured `searches` statuses
+and coverage: a passed command may still contain a partial, unavailable or failed keyword query.
+Legacy hit arrays remain available, but an empty array alone is not evidence of absence.
+
 Use the baseline as the reference for pre-change facts; append later discoveries separately.
 Test design takes scenarios from recon/design and fills coverage gaps, rather than producing
 duplicate suites. Planning, code review, integration and knowledge reuse those artifacts.
