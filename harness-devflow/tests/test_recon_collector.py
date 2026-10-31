@@ -6,6 +6,7 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from unittest.mock import patch
 
@@ -80,6 +81,15 @@ class CollectorTests(unittest.TestCase):
         self.assertFalse(result["complete"])
         self.assertEqual(self.search("absent")[1]["status"], "no_match")
 
+    def test_redaction_handles_spaces_and_escaped_quotes(self):
+        for value in ['password: ALPHA BETA GAMMA', r'{"client_secret":"ALPHA\"BETA","client_id":"public"}',
+                      r"password = 'ALPHA\'BETA'"]:
+            text = collector.redact(value)
+            self.assertIn("REDACTED", text)
+            self.assertFalse(any(part in text for part in ["ALPHA", "BETA", "GAMMA"]))
+            if 'client_id' in value:
+                self.assertIn('"client_id":"public"', text)
+
     def test_missing_tool_has_explicit_outcome(self):
         with patch.object(collector.shutil, "which", return_value=None):
             hits, result, _ = self.search("absent")
@@ -90,6 +100,8 @@ class CollectorTests(unittest.TestCase):
         self.write("app.py", "hello\n")
         files = ["app.py"]
         for stdout, expected in [('[]\n', "error"), ('not-json\n', "error"),
+                                 ('{"type": []}\n', "error"), ('{"type": "unexpected"}\n', "error"),
+                                 ('{"type": "end", "data": {"path": {"text": []}}}\n', "error"),
                                  (json.dumps({"type": "match", "data": {"path": {"bytes": "YQ=="},
                                      "lines": {"text": "MATCH"}, "line_number": 1}}) + '\n', "partial")]:
             searches = {}
@@ -97,6 +109,7 @@ class CollectorTests(unittest.TestCase):
                 collector.keyword_hits(self.root, ["MATCH"], 1, [], files=files, searches=searches)
             self.assertEqual(searches["MATCH"]["status"], expected)
             self.assertFalse(searches["MATCH"]["complete"])
+            self.assertEqual(searches["MATCH"]["completed_files"], 0 if expected == "error" else 1)
 
     def test_byte_budget_bounds_raw_capture_and_reports_incomplete(self):
         self.write("long.txt", "MATCH " + "x" * 262144)
@@ -115,6 +128,19 @@ class CollectorTests(unittest.TestCase):
     def test_timeout_is_not_empty_success(self):
         rc, _, _ = collector.run([sys.executable, "-c", "import time; time.sleep(2)"], self.root, timeout=0.03)
         self.assertEqual(rc, 124)
+
+    @unittest.skipUnless(os.name == "posix", "POSIX process-group cleanup")
+    def test_timeout_stops_descendants_not_only_the_parent(self):
+        marker = self.root / 'descendant-survived'
+        child = ('import time; from pathlib import Path; time.sleep(0.5); '
+                 'Path(' + repr(str(marker)) + ').write_text("fixture")')
+        parent = ('import subprocess,sys,time; subprocess.Popen([sys.executable,"-c",' + repr(child) + ']); '
+                  'print("spawned", flush=True); time.sleep(2)')
+        rc, out, _ = collector.run([sys.executable, '-c', parent], self.root, timeout=0.25)
+        self.assertEqual(rc, 124)
+        self.assertIn('spawned', out)
+        time.sleep(0.6)
+        self.assertFalse(marker.exists())
 
     def test_sample_limit_and_exact_match_have_different_coverage(self):
         self.write("app.py", "MATCH\nMATCH\nMATCH\n")

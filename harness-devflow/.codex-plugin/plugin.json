@@ -1,6 +1,6 @@
 {
   "name": "harness-devflow",
-  "version": "1.0.1+codex.20261031002019",
+  "version": "1.0.2+codex.20261031105453",
   "description": "Codex development workflow with early feasibility probes, automated verification and acceptance evidence.",
   "author": {
     "name": "Harness Devflow contributors"

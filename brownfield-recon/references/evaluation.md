@@ -13,7 +13,9 @@ unittest suites. They exercise real subprocesses and Git fixtures:
   are redacted while non-sensitive code remains searchable.
 - Diverged base/topic history does not include base-only commits in topic hotspots.
 - Byte/time/sample limits and skipped large files remain distinguishable from a complete no-match;
-  malformed regex and missing tooling report explicit failures and coverage.
+  malformed regex/events and missing tooling report explicit failures and coverage. Credential
+  values containing spaces or escaped quotes are redacted in full. POSIX timeout cleanup stops
+  spawned descendants as well as the direct process.
 - Unrelated edits or a content-preserving HEAD change can reuse scoped recon. Changed inspected
   inputs, new/deleted files inside a directory scope and earlier-collected dependencies invalidate
   it. Review still rejects code changes after its assessment.

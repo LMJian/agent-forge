@@ -10,11 +10,13 @@ import json
 import math
 import os
 from pathlib import Path
+import queue
 import re
-import selectors
 import shutil
+import signal
 import subprocess
 import sys
+import threading
 import time
 from typing import Any, Iterable
 
@@ -47,7 +49,7 @@ TEST_RE = re.compile(r"(^|/)(test|tests|testing)(/|$)|(_test\.|\.test\.)", re.IG
 DEFAULT_SEARCH_BYTES = 256 * 1024
 DEFAULT_SEARCH_SECONDS = 15.0
 VALUE_RE = re.compile(
-    r'''(?i)(\b(?:password|passwd|api[_-]?key|(?:access|client|app)[_-]?secret|secret(?:[_-]?key)?|private[_-]?key|(?:access|refresh|id)[_-]?token|token|_auth(?:Token)?|_password)\b["']?\s*[:=]\s*)("[^"\r\n]*"|'[^'\r\n]*'|[^\s,;}]+)'''
+    r'''(?i)(\b(?:password|passwd|api[_-]?key|(?:access|client|app)[_-]?secret|secret(?:[_-]?key)?|private[_-]?key|(?:access|refresh|id)[_-]?token|token|_auth(?:Token)?|_password)\b["']?\s*[:=]\s*)("(?:\\.|[^"\\\r\n])*"|'(?:\\.|[^'\\\r\n])*'|[^\r\n]+)'''
 )
 AUTH_RE = re.compile(r"(?i)\b(Bearer|Basic)\s+[A-Za-z0-9+/_.=:-]+")
 URL_AUTH_RE = re.compile(r"(?i)(https?://)[^/\s:@]+:[^/\s@]+@")
@@ -67,32 +69,54 @@ def run(cmd: list[str], cwd: Path, timeout: float = 30,
     Callers must not treat their partial stdout as a complete negative result.
     """
     output, errors = bytearray(), bytearray()
+    events: queue.Queue = queue.Queue(maxsize=4)
+    stop = threading.Event()
+    readers = []
     proc = None
-    try:
-        proc = subprocess.Popen(cmd, cwd=str(cwd), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        deadline = time.monotonic() + timeout
-        code, reason = None, ""
-        with selectors.DefaultSelector() as poll:
-            poll.register(proc.stdout, selectors.EVENT_READ, (output, max_output_bytes))
-            poll.register(proc.stderr, selectors.EVENT_READ, (errors, 16 * 1024))
-            while poll.get_map():
-                remaining = deadline - time.monotonic()
-                if remaining <= 0:
-                    code, reason = 124, "command timeout"
-                    break
-                for key, _ in poll.select(min(remaining, 0.1)):
-                    target, limit = key.data
-                    chunk = os.read(key.fd, min(65536, limit - len(target) + 1))
-                    if not chunk:
-                        poll.unregister(key.fileobj)
-                    elif len(target) + len(chunk) > limit:
-                        target.extend(chunk[:limit - len(target)])
-                        code, reason = 125, "command output byte budget exhausted"
+    code, reason = None, ""
+
+    def drain(stream, target, limit):
+        # Bounded queues also work for Windows anonymous pipes, unlike selectors.
+        # The reader owns closing its pipe; a lingering descendant cannot make
+        # the main thread block indefinitely while closing a locked read buffer.
+        with stream:
+            while not stop.is_set():
+                chunk = stream.read1(min(4096, limit + 1))
+                while not stop.is_set():
+                    try:
+                        events.put((target, limit, chunk), timeout=0.05)
                         break
-                    else:
-                        target.extend(chunk)
-                if code is not None:
+                    except queue.Full:
+                        continue
+                if not chunk:
                     break
+
+    try:
+        proc = subprocess.Popen(cmd, cwd=str(cwd), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                start_new_session=(os.name == "posix"))
+        deadline = time.monotonic() + timeout
+        for stream, target, limit in [(proc.stdout, output, max_output_bytes), (proc.stderr, errors, 16 * 1024)]:
+            reader = threading.Thread(target=drain, args=(stream, target, limit), daemon=True)
+            reader.start()
+            readers.append(reader)
+        open_pipes = 2
+        while open_pipes:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                code, reason = 124, "command timeout"
+                break
+            try:
+                target, limit, chunk = events.get(timeout=min(remaining, 0.1))
+            except queue.Empty:
+                continue
+            if not chunk:
+                open_pipes -= 1
+            elif len(target) + len(chunk) > limit:
+                target.extend(chunk[:limit - len(target)])
+                code, reason = 125, "command output byte budget exhausted"
+                break
+            else:
+                target.extend(chunk)
         if code is None:
             try:
                 code = proc.wait(timeout=max(0.001, deadline - time.monotonic()))
@@ -102,12 +126,18 @@ def run(cmd: list[str], cwd: Path, timeout: float = 30,
     except OSError as exc:
         return 127, "", redact(str(exc))
     finally:
+        stop.set()
         if proc is not None:
-            if proc.poll() is None:
+            if os.name == "posix" and (proc.poll() is None or code in (124, 125)):
+                try:
+                    os.killpg(proc.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+            elif proc.poll() is None:
                 proc.kill()
             proc.wait()
-            proc.stdout.close()
-            proc.stderr.close()
+            for reader in readers:
+                reader.join(timeout=0.2)
 
 
 def is_sensitive(rel: str) -> bool:
@@ -449,10 +479,16 @@ def keyword_hits(
                     error_kind, error_text = "invalid_output", "rg returned a non-object event"
                     break
                 kind, data = event.get("type"), event.get("data")
+                if not isinstance(kind, str) or kind not in {"begin", "match", "context", "end", "summary"}:
+                    error_kind, error_text = "invalid_output", "rg returned an unknown event type"
+                    break
                 if kind in {"match", "end"} and (not isinstance(data, dict) or not isinstance(data.get("path"), dict)):
                     error_kind, error_text = "invalid_output", "rg event has no valid path"
                     break
                 if kind == "end":
+                    if data["path"].get("text") is not None and not isinstance(data["path"]["text"], str):
+                        error_kind, error_text = "invalid_output", "rg returned an invalid path value"
+                        break
                     ended.add(data["path"].get("text"))
                 if kind != "match":
                     continue
@@ -463,11 +499,14 @@ def keyword_hits(
                 if path is None or text is None:
                     reasons.append("non_text_event")
                     continue
+                if not isinstance(path, str) or not isinstance(text, str):
+                    error_kind, error_text = "invalid_output", "rg returned an invalid match value"
+                    break
                 if len(hits) >= max_hits:
                     reasons.append("hit_limit")
                     break
                 hits.append({"path": path, "line": data["line_number"], "text": redact(text.rstrip("\r\n"))[:500]})
-            completed_files += len(batch) if rc in (0, 1) else len(ended - {None})
+            completed_files += len(batch) if rc in (0, 1) and error_kind is None else len(ended - {None})
             if rc == 125:
                 reasons.append("byte_budget")
             elif rc == 124:
