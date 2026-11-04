@@ -28,11 +28,19 @@ investigation decisions below correctly.
 Use a case with the request, raw artifacts and this Skill. Assess the resulting answer or report.
 The expected behavior below is a maintainer rubric, not additional instructions to an evaluator.
 
+Reusable local snapshots are in [evals/cases.json](../evals/cases.json). Materialize only a case's
+`files` in a disposable directory and provide its `request`, Skill path and permitted output location.
+Do not pass `criteria`, intended fixes or this maintenance rubric to the executor. These snapshots
+model source/ref and follow-up decisions; they do not authorize fetching real repositories or querying
+deployment systems. Preserve the original files and the actual result/action record for grading.
+
 | Request and raw evidence | Observable expected behavior |
 | --- | --- |
 | Ask which handler invokes a known function; supply its caller and implementation. | Answer the bounded question with decisive file evidence. No mandatory whole-repository inventory, report or release-readiness label. |
 | Change one module after a baseline; another module has an unrelated commit. | Refresh only affected claims. Preserve earlier findings rather than overwriting the report or restarting every trace. |
 | Candidate IDL adds a method but removes a type used by the consumer's pinned SDK. | Identify both the addition and regression. Do not assume a feature branch is a superset. |
+| Default snapshot lacks streaming rendering; a candidate has registered implementation and the pinned SDK already has its method. | Inspect the relevant sources, separate candidate/merge/deployment states and classify reuse or version coordination rather than rebuilding or forcing an SDK upgrade. |
+| An old report recommends new platform work, but a dated follow-up supplies candidate evidence and accepted user boundaries. | Preserve historical facts, maintain a current-conclusion pointer, hand off business goal/gap and effective scope, and stop asking resolved questions. |
 | OAuth initialization returns 200; callback/token exchange is not observed. | Report initialization success and pending downstream verification. Do not label the full OAuth chain passed or block unrelated local implementation. |
 | Log query returns zero rows with partial coverage or a parser/access failure. | Distinguish empty, partial and failed queries. Keep request scope, time and runtime identity; do not conclude that the target service has no logs. |
 | One trace has requested lane PPE but observed runtime production; a later trace reaches PPE. | Record both observations with their own deployment/routing/LogID/time context. Do not merge them into one verified route. |
@@ -42,3 +50,8 @@ For a model forward-test, record actual input, output, supported/unsupported cla
 scope violations. Do not label document-format or distribution checks as a successful model
 evaluation. Reuse these cases after a material decision-policy change; ordinary edits do not
 require a new evaluation harness.
+
+Record the Skill content hash, executor and case ID. Grade each criterion pass/fail/not_checked with
+an output passage or observed action; absent tool records do not prove that an action was avoided.
+Label a same-agent walkthrough as such. A downstream design should be able to use the observed handoff
+without reading the producing chat; an artifact's existence or a collector exit code does not prove it.

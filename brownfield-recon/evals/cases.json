@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "purpose": "Generic local-only maintenance cases. Criteria are not executor input.",
+  "cases": [
+    {
+      "id": "capability-candidate-and-pinned-client",
+      "request": "使用 brownfield-recon，基于 requirements.md 和 snapshots/ 判断可恢复报表导出的改造范围：是否已有可复用流式渲染、固定 SDK 是否缺方法、是否还需要补仓。仅做本地快照调查，给出证据和限制，遵守 environment.md。",
+      "files": {
+        "requirements.md": "# Resumable report exports\n运营人员需要导出大报表。进程重启后，应从最后确认的进度继续，避免整份导出重跑。\n本期支持 CSV 和 JSONL。最大导出行数与文件保留时长仍待产品确定。\n现有作业系统已有创建、查询、取消和下载入口。本次补齐流式渲染调用和持久化恢复进度。\n所有材料都是合成本地命名快照，没有真实 Git 元数据、远端或部署证据。\n",
+        "snapshots/metadata.json": "{\n  \"source_kind\": \"synthetic named snapshots\",\n  \"default_ref\": \"default\",\n  \"candidate_ref\": \"feature/streaming-renderer\",\n  \"candidate_merge_state\": \"open_unmerged\",\n  \"deployed_version\": null,\n  \"consumer_pinned_sdk\": \"render-client-1.4\"\n}",
+        "snapshots/default/service.py": "ROUTES = {\"/render/file\": \"render_complete_file\"}\n",
+        "snapshots/candidate/service.py": "def render_chunks(snapshot_id, after_row, chunk_rows):\n    rows = read_snapshot(snapshot_id, after_row)\n    for batch in chunked(rows, chunk_rows):\n        yield {\"last_row\": batch[-1].row_id, \"content\": encode_rows(batch)}\n\nROUTES = {\"/render/file\": \"render_complete_file\", \"/render/chunks\": render_chunks}\n",
+        "snapshots/pinned-client-1.4.py": "class RenderClient:\n    def render_file(self, params):\n        return post(\"/render/file\", params)\n    def render_chunks(self, snapshot_id, after_row, chunk_rows):\n        return stream_post(\"/render/chunks\", {\n            \"snapshot_id\": snapshot_id, \"after_row\": after_row, \"chunk_rows\": chunk_rows})\n",
+        "environment.md": "仅允许本地读取材料和写入产物。禁止外部网络、GUI、安装依赖和操作真实仓库或开发分支。\n只有命名快照，不得编造 commit、远端查询、运行测试或部署结果。没有图形解析器或渲染器。\n"
+      },
+      "criteria": [
+        "检查默认服务、候选注册及实现和固定 SDK 源码，而非从命名或元数据独自推断完整能力。",
+        "区分 default 缺流式 endpoint、candidate 已有注册实现、候选未合并及部署未知，不将任一状态扩大为另一状态。",
+        "固定 SDK 已有对应方法，不以缺少方法为由强制升级；实际兼容版本仍需后续验证。",
+        "将候选渲染工作归为复用/适配/配置与版本协调；只有明确仍缺关键契约时才请求具体仓库及理由。",
+        "结论限定为命名快照，不虚构 Git/MR/部署验证，不做全仓 inventory、真实远端访问或分支切换。"
+      ]
+    },
+    {
+      "id": "follow-up-effective-handoff",
+      "request": "使用 brownfield-recon。初步报告为 baseline/report.md，现在已有补充证据和用户决定。请复核并更新该报告作为后续设计入口，给出最新改造范围和待明确事项。保留原调查事实，遵守 environment.md。",
+      "files": {
+        "requirements.md": "# Resumable report exports\n运营人员需要导出大报表。进程重启后，应从最后确认的进度继续，避免整份导出重跑。\n本期支持 CSV 和 JSONL。最大导出行数与文件保留时长仍待产品确定。\n现有作业系统已有创建、查询、取消和下载入口。本次补齐流式渲染调用和持久化恢复进度。\n所有材料都是合成本地命名快照，没有真实 Git 元数据、远端或部署证据。\n",
+        "baseline/report.md": "# Export recovery recon\nScope: export-service, job-manager, format-service and render-client.\nSource: named local snapshots; no Git metadata. Next phase: design.\n## Initial discovery\njob-manager 已有作业创建、查询、取消与下载接口。\nexport-service 已能读取报表数据并保存文件，但恢复进度仅存于进程内存，重启后丢失。\nformat-service 的 default 快照仅有整份文件渲染。初步规划可能需要本次新增整套流式渲染能力。\n当时尚待决定恢复使用旧快照还是最新数据，以及进度由谁保存。\n补充材料见 [后续结论](follow-up.md)。\n",
+        "baseline/follow-up.md": "# Later evidence and accepted decisions\ncandidate 快照中，format-service 已实现流式分块渲染并注册 /render/chunks。consumer 固定的 render-client 1.4 已提供对应调用。该证据取代“本次新增整套流式渲染”的初步规划，但不改变 default 快照只提供整份文件渲染的历史事实。源码见 ../snapshots/。\nmetadata.json 记录候选工作尚未合并，部署版本未知。本次复用该能力，协调兼容版本及实际 endpoint，不根据 default 的缺口重复开发，也不只因新方法而强制 SDK 升级。\n用户已确定：重试沿用同一 job_id 和创建时的数据快照，不重新读取最新数据。恢复进度由 export-service 持久化。只有对应分块写入对象存储成功后，才能提交该分块的恢复进度。\n创建请求成功只表示作业记录已持久化受理。文件完整生成并提交完成状态后，才可显示可下载。已有查询、取消、下载入口继续工作。\n本次新增导出恢复逻辑、进度存储和候选渲染调用适配；复用现有作业管理、数据读取及对象存储接入。\n仍待明确：最大导出行数和文件保留时长。接入前需核实候选渲染服务版本、endpoint 和对象存储配置。分块大小、超时和重试初值由服务端提出并验证，不能当成已测容量，也不能承诺故障后一定恢复成功。\ndesign 可在上述边界内继续。业务限额相关校验、集成和发布需要相应决定或证据。\n",
+        "snapshots/metadata.json": "{\n  \"source_kind\": \"synthetic named snapshots\",\n  \"default_ref\": \"default\",\n  \"candidate_ref\": \"feature/streaming-renderer\",\n  \"candidate_merge_state\": \"open_unmerged\",\n  \"deployed_version\": null,\n  \"consumer_pinned_sdk\": \"render-client-1.4\"\n}",
+        "snapshots/default/service.py": "ROUTES = {\"/render/file\": \"render_complete_file\"}\n",
+        "snapshots/candidate/service.py": "def render_chunks(snapshot_id, after_row, chunk_rows):\n    rows = read_snapshot(snapshot_id, after_row)\n    for batch in chunked(rows, chunk_rows):\n        yield {\"last_row\": batch[-1].row_id, \"content\": encode_rows(batch)}\n\nROUTES = {\"/render/file\": \"render_complete_file\", \"/render/chunks\": render_chunks}\n",
+        "snapshots/pinned-client-1.4.py": "class RenderClient:\n    def render_file(self, params):\n        return post(\"/render/file\", params)\n    def render_chunks(self, snapshot_id, after_row, chunk_rows):\n        return stream_post(\"/render/chunks\", {\n            \"snapshot_id\": snapshot_id, \"after_row\": after_row, \"chunk_rows\": chunk_rows})\n",
+        "environment.md": "仅允许本地读取材料和写入产物。禁止外部网络、GUI、安装依赖和操作真实仓库或开发分支。\n只有命名快照，不得编造 commit、远端查询、运行测试或部署结果。没有图形解析器或渲染器。\n"
+      },
+      "criteria": [
+        "入口给出当前结论或指针，明确新建整套流式渲染的初步规划已被候选证据取代，不只在文末堆放矛盾结论。",
+        "保留 default 缺流式能力、进度仅存内存和当时未定决定的原历史事实，不改写过去。",
+        "交接说明业务目标、现有能力与缺口、恢复逻辑和进度存储新增、候选渲染复用与配置版本联动，并有证据和范围限制。",
+        "已接受的同 job_id、原快照、保存方、进度提交顺序及成功边界保持已决，不重新列为待问问题。",
+        "区分业务限额、技术接入核实与可调参数，写明影响、下一步及阶段；设计可有边界地继续，不冒称实现、集成或发布就绪。",
+        "只刷新相关结论，不重复请求已有源码、整仓采集或执行外部操作。"
+      ]
+    }
+  ]
+}

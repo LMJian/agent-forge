@@ -1,25 +1,29 @@
 {
   "source": "Byte-identical copies of the standalone skills at the repository root (../brownfield-recon, ../server-tech-design); scripts/validate_distribution.py fails on drift",
-  "synced_at": "2026-10-16",
+  "synced_at": "2026-11-04",
   "original_files": {
     "brownfield-recon": {
-      "SKILL.md": "f15352dafee38fd554206b01d39dbb2d44317c5999aa1bda72b4a58f80d41c4f",
+      "SKILL.md": "95674e7b4f8773368d6155e984f3e1025744ddc27bf559635760b37afdb13e41",
       "agents/openai.yaml": "a838f069705573ef064d3df83811b785d005e950a904272c80d1f011e626fecb",
-      "references/report-contract.md": "78035603f9dc3c19e29812cfb84b9a433f573f316487b11e399ab2a6604d9e3d",
-      "references/search-playbook.md": "80dc91e38467d002eba8480f2c732bb95a15bde73532fbb70cde5b3eb825ad82",
-      "scripts/collect_evidence.py": "170a5e89bd95ba0e0b2f11728b005b40d60b4f0889a17399eba571355ba9f1c8"
+      "evals/cases.json": "fde385cf5d5ac81c4e15c03eea10c42901af76e638c2702a17e92d70ef95aa3a",
+      "references/evaluation.md": "67e2da4b6d56e4ab34a05066302fe32b08f1292eedebf9c686d95cafff543f87",
+      "references/report-contract.md": "8979b99879584ca02bcfd0c9fa6c4be6b329ef8e7b5d44b28836ccfc2cb2d16f",
+      "references/search-playbook.md": "3cdd2de9ad056c70d9804d9aa92573615968cbb742d65eb502599f072ce5e220",
+      "scripts/collect_evidence.py": "a6366f0b4b90d570f03dedafd7f7df47713fb84b2ed93fa45097b30978ff03e6"
     },
     "server-tech-design": {
-      "SKILL.md": "edd83f33cb71e8f4db4538981cf703dad33bb8ec9e2f6c8cb061fd0c194117b3",
-      "evals/cases.json": "4108ee770abfbd6ed5e07845ae2546f124ca69ad77340a259a47885447588a31",
-      "references/diagram-checks.md": "855344dac597dafde5fa9032394a749233697b54e81dd88bc6294674adcc6687",
-      "references/evaluation.md": "f78efa16f1b02959ba63a0db1362b335cd6db1c5b07e1e18f42cd9b5b2578511",
-      "references/recon-inputs.md": "502f09c6550ee3406eb0f7bf4785a1a6b28ca87090e972f85f5f00bb8c22aeca",
-      "references/review-checklist.md": "b63b1da03c939101c7d9e385770ef80a4a51c94b8652be7ec2475e917eb1d7ff",
-      "references/review-output.md": "7329a0db85fa24fa3b7228e34ee5b9494951cd9f63a09b7672ecc5d9bc4e1cfc",
-      "references/section-guide.md": "150a3fc34c4f8bcd852c12e441bd6c9a510a547a2535ccfc144c7bdff3cb3455",
+      "SKILL.md": "a22f1d7e1c754d4f3970ce51f00ae71ed2d8d487966cac66d7600b269edfac6a",
+      "evals/cases.json": "d9d8084ed0c2ea172ea861566350bafdc01438376f05c61c908e277997a9c5fc",
+      "references/delivery.md": "d3566c7a4ff3f604d71a689d84d9c5b83bbf4a682449f6b726b87c5ef0252571",
+      "references/diagram-checks.md": "a929c9070d9ef46934b9981cd001367af79669c5643990375df4d4aab8286bf3",
+      "references/evaluation.md": "f03a60d98d1191751e4887b2bd69b59a2aaada840668498529ef19006036aba2",
+      "references/first-delivery-review.md": "b214d82d282b4f69e542aa20652ad72f60b547a6612db09a446e96efb54524bf",
+      "references/recon-inputs.md": "7f299e0de64d4dcd91146619f4994ceeebb23d31cda79e3da55257145d73bfc3",
+      "references/review-checklist.md": "864a79db4af764bfedfb7f304f5efc917c16df8374531f75b6d9c9853647315a",
+      "references/review-output.md": "4e78c0e53c793af8b564fe18126b5d4e91e7c1e5c1ca88a27169c1d9146e350a",
+      "references/section-guide.md": "83db84d0f784e522d7dc1aa6cafe16d42a2f2c65a6edff6f55308ffb0bedaabf",
       "references/template.md": "e4a9e161184fb42a0e16faa21d617e49e69a3b4081bd7689e824d7de1acc215b",
-      "references/writing-style.md": "c303db73b486f1d0d8c78686dd035633e507b5443852c0129c75744866b5040f"
+      "references/writing-style.md": "5deb2e31b13d10303ae4f1fe543641cb90d42736aa0f67edcf9c008448814c19"
     }
   }
 }

@@ -185,6 +185,45 @@
         "说明检查了业务背景、职责、示例、成功和失败条件以及术语，不无依据追加监控、审批或新章节。",
         "不把清晰的条件句机械拆成碎片，不声称正式 STE 认证，也不自动创建远程报告。"
       ]
+    },
+    {
+      "id": "first-delivery-cross-service",
+      "request": "使用 server-tech-design，根据 requirements.md、baseline/report.md 及其链接材料，写一份完整但聚焦的本地方案 design.md。读者有约两年后端经验但不了解本项目。遵守 environment.md，只完成方案，不实现业务代码。",
+      "files": {
+        "requirements.md": "# Resumable report exports\n运营人员需要导出大报表。进程重启后，应从最后确认的进度继续，避免整份导出重跑。\n本期支持 CSV 和 JSONL。最大导出行数与文件保留时长仍待产品确定。\n现有作业系统已有创建、查询、取消和下载入口。本次补齐流式渲染调用和持久化恢复进度。\n所有材料都是合成本地命名快照，没有真实 Git 元数据、远端或部署证据。\n",
+        "baseline/report.md": "# Export recovery recon\nScope: export-service, job-manager, format-service and render-client.\nSource: named local snapshots; no Git metadata. Next phase: design.\n## Initial discovery\njob-manager 已有作业创建、查询、取消与下载接口。\nexport-service 已能读取报表数据并保存文件，但恢复进度仅存于进程内存，重启后丢失。\nformat-service 的 default 快照仅有整份文件渲染。初步规划可能需要本次新增整套流式渲染能力。\n当时尚待决定恢复使用旧快照还是最新数据，以及进度由谁保存。\n补充材料见 [后续结论](follow-up.md)。\n",
+        "baseline/follow-up.md": "# Later evidence and accepted decisions\ncandidate 快照中，format-service 已实现流式分块渲染并注册 /render/chunks。consumer 固定的 render-client 1.4 已提供对应调用。该证据取代“本次新增整套流式渲染”的初步规划，但不改变 default 快照只提供整份文件渲染的历史事实。源码见 ../snapshots/。\nmetadata.json 记录候选工作尚未合并，部署版本未知。本次复用该能力，协调兼容版本及实际 endpoint，不根据 default 的缺口重复开发，也不只因新方法而强制 SDK 升级。\n用户已确定：重试沿用同一 job_id 和创建时的数据快照，不重新读取最新数据。恢复进度由 export-service 持久化。只有对应分块写入对象存储成功后，才能提交该分块的恢复进度。\n创建请求成功只表示作业记录已持久化受理。文件完整生成并提交完成状态后，才可显示可下载。已有查询、取消、下载入口继续工作。\n本次新增导出恢复逻辑、进度存储和候选渲染调用适配；复用现有作业管理、数据读取及对象存储接入。\n仍待明确：最大导出行数和文件保留时长。接入前需核实候选渲染服务版本、endpoint 和对象存储配置。分块大小、超时和重试初值由服务端提出并验证，不能当成已测容量，也不能承诺故障后一定恢复成功。\ndesign 可在上述边界内继续。业务限额相关校验、集成和发布需要相应决定或证据。\n",
+        "snapshots/metadata.json": "{\n  \"source_kind\": \"synthetic named snapshots\",\n  \"default_ref\": \"default\",\n  \"candidate_ref\": \"feature/streaming-renderer\",\n  \"candidate_merge_state\": \"open_unmerged\",\n  \"deployed_version\": null,\n  \"consumer_pinned_sdk\": \"render-client-1.4\"\n}",
+        "snapshots/default/service.py": "ROUTES = {\"/render/file\": \"render_complete_file\"}\n",
+        "snapshots/candidate/service.py": "def render_chunks(snapshot_id, after_row, chunk_rows):\n    rows = read_snapshot(snapshot_id, after_row)\n    for batch in chunked(rows, chunk_rows):\n        yield {\"last_row\": batch[-1].row_id, \"content\": encode_rows(batch)}\n\nROUTES = {\"/render/file\": \"render_complete_file\", \"/render/chunks\": render_chunks}\n",
+        "snapshots/pinned-client-1.4.py": "class RenderClient:\n    def render_file(self, params):\n        return post(\"/render/file\", params)\n    def render_chunks(self, snapshot_id, after_row, chunk_rows):\n        return stream_post(\"/render/chunks\", {\n            \"snapshot_id\": snapshot_id, \"after_row\": after_row, \"chunk_rows\": chunk_rows})\n",
+        "environment.md": "仅允许本地读取材料和写入产物。禁止外部网络、GUI、安装依赖和操作真实仓库或开发分支。\n只有命名快照，不得编造 commit、远端查询、运行测试或部署结果。没有图形解析器或渲染器。\n"
+      },
+      "criteria": [
+        "首次交付的 design.md 自身说明导出业务目标、已有能力、重启丢进度的缺口及新模块的职责依据；不能只在最终聊天补背景。",
+        "区分导出恢复与进度存储新增、现有作业/存储能力复用、渲染候选实现适配及版本配置联动；不重复开发整套流式渲染或无依据要求升级固定 SDK。",
+        "沿用已接受的 job_id、创建时快照、进度保存方和先写分块再提交进度的决定；不重新询问或暗中更改这些边界。",
+        "用完整示例讲清创建受理、恢复进度和文件可下载的区别，先解释必要的项目术语；条件、先后次序及失败结果保持明确。",
+        "明确 CSV/JSONL 的范围，最大导出行数和保留时长仍待定；不以文档外上下文代替范围和未决项说明。",
+        "未决项区分业务限额、实际接入证据和可调参数，说明影响、下一步及需要确定的阶段；候选存在不等于已经部署。",
+        "如果提出有界重试，不承诺故障后最终必定成功；拟定数值不写成已有测量或已通过的测试。",
+        "没有外部调用、安装、GUI、开发分支操作或虚构验证；无渲染器时不声称图已渲染检查。"
+      ]
+    },
+    {
+      "id": "repair-three-dimensions",
+      "request": "检查 design.md，有问题直接修复：是否讲清背景和改造范围，是否符合 Reader and explanation guidance 与 Chinese controlled language，是否列出待明确事项。以 facts.md 为准，保留 JSON 示例和技术契约，不调用外部系统。",
+      "files": {
+        "facts.md": "用户希望检索已上传的文档。现有服务可持久化文件和元数据，但尚未建立索引任务。\n本次新增索引任务模块；文本解析服务已有候选实现，只需适配配置和协调版本。\n上传成功是文件持久化成功；索引任务受理不代表文档已可搜索。只有检索引擎提交索引后，才能标为可搜索。\n“专题 B”指尚未明确的可索引文件类型与字段范围。检索引擎实际索引名是接入核实项。批量条数建议 5000，尚未验证。\n",
+        "design.md": "# Document index\n## 方案\n新增 IndexBridge 对接 Catalog 和 Committer。\n本次重写文本解析服务，专题 B 定稿后上线。\n上传文件并创建任务、索引完毕后才返回上传成功，任务返回后就能搜索所有文档。\n各模块形成闭环，相关部门完善即可。\n## 接口示例\n```json\n{\"batch_size\":5000,\"mode\":\"incremental\"}\n```\n"
+      },
+      "criteria": [
+        "一次修复 design.md 的背景/范围、讲解/中文表述和待明确事项，而非只在聊天中提出建议。",
+        "说明文件存储的已有能力及索引缺口，区分新增索引模块与解析服务候选实现复用。",
+        "正确区分上传成功、任务受理和可搜索状态，不把后续完成当成上游成功的前提或结果。",
+        "解释或移除无用项目简称、专题 B 及无依据的口号，写清动作主体、条件和时序；不机械拆碎必要条件。",
+        "业务类型/字段、实际索引名和批量条数建议分别标明状态、影响及下一步；JSON 示例逐字保留，不新增业务约束或虚构验证。"
+      ]
     }
   ]
 }

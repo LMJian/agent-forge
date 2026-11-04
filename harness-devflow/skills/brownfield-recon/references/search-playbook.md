@@ -45,6 +45,28 @@ Before repeated reads of an uncertain revision, establish whether the local Git 
 
 Use another relevant available source, such as a pinned dependency cache, historical callers, tests or documentation, to support only the claims it establishes. Do not present reconstructed semantics as verified original schema. If the missing evidence is essential to the requested action, state the gap and obtain the necessary source/access within the task's permissions; otherwise continue with an explicit limit. An unavailable source is not proof that the capability never existed.
 
+## Capability availability
+
+An absence claim is scoped to inspected sources. When current requirements or evidence suggest
+in-progress dependency work, make one bounded discovery pass before declaring the work missing:
+
+1. Check the caller's pinned SDK and the owner of the relevant schema, registration and configuration.
+   A helper or type definition does not establish a registered, reachable caller-to-result path.
+2. Inspect relevant available refs or permitted repository/MR metadata. For example, narrow
+   `git for-each-ref` to local/tracking refs associated with the capability, then read the candidate with
+   `git show <ref>:<path>`. Follow a known MR/source branch rather than searching every branch. Fetch a
+   missing candidate only within the session's access and branch rules; inspection needs no checkout.
+3. Record separately: absent from the inspected default ref; implementation present in a candidate;
+   registration/configuration complete in that candidate; merge/release state; deployment verified or
+   unknown. A candidate does not automatically become a deployable or compatible version.
+4. Classify resulting work as new implementation, adaptation, configuration/version coordination or
+   unresolved evidence. Ask for a missing repository only when a consequential contract still cannot be
+   checked from available sources. Give its role, required symbols/contracts and why they matter.
+
+Stop when the relevant capability and reuse boundary are established. If access or candidate evidence
+is unavailable, state the checked scope and remaining gap; do not repeat failed searches or infer global
+absence. A new method, generic forwarding helper or configuration field alone does not prove the chain.
+
 ## Remote contracts and uncertainty
 
 Record the inspected repository/SDK/IDL version and which side of a contract remains unavailable. Inspect a relevant local SDK implementation when the task depends on its subscription, retry or cleanup behavior; a method name alone is not proof.

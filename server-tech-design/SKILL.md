@@ -71,6 +71,12 @@ Use the supplied material and relevant repository or document evidence to identi
 - A one-sentence proposed solution and the few decisions that determine its behavior.
 - One concrete example that traverses the main flow, including the relevant changes and failures.
 
+For a design handoff, establish the effective inputs before drafting: business goal, current capability
+and gap, latest accepted boundaries, affected components, and remaining decisions. Read relevant dated
+addenda and linked follow-ups; an old report's opening conclusion may have been superseded. Missing
+background in a recon report is a gap to repair from the supplied requirements, not permission to start
+the design with implementation details. Do not ask the user to decide again what the conversation settled.
+
 Trace where the inputs come from, who owns the state, how the target or version is selected, and what
 happens when a step fails. For a configuration-driven service, discovery, loading, use, updates, and
 withdrawal may be useful checkpoints; use only those relevant to the change.
@@ -119,9 +125,12 @@ that affect implementation, compatibility, validation, or release; mark their co
 
 ### 5. Review comprehension and deliver
 
-Use the applicable checks in [review-checklist.md](references/review-checklist.md). First ask whether a
-reader can restate the solution and walk the example; then inspect completeness. Fix missing reasoning
-and confusing structure, rather than adding a section solely to tick a box.
+For a new draft or a substantial revision, perform the [first-delivery review](references/first-delivery-review.md)
+on the actual local draft before publishing or handing it off. Answer from document passages, not from
+facts held only in the conversation. Repair missing explanations before first delivery; readback equality
+does not establish writing quality. A narrow edit checks the affected explanation and its dependencies.
+Use [review-checklist.md](references/review-checklist.md) for the applicable engineering checks, without
+adding sections solely to tick boxes.
 
 Review the whole requested scope, including terms, conditions, examples and figure labels. Correct
 observed defects when corrections are requested; do not invent new findings or repeatedly rewrite a

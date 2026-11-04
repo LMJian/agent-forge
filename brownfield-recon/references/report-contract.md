@@ -30,12 +30,17 @@ apply when preparing a change.
 
 Before implementation, write a compact `report.md` containing:
 
-- Task/goal and target requirement/design source, repository identity, and affected repository-relative paths or contracts.
+- Business goal and target requirement/design source, existing capability and the gap this change must close, repository identity, and affected repository-relative paths or contracts.
 - Actual branch, baseline commit/source version, capture time and relevant working-tree state. Record changed/untracked files and captured evidence or content digests when conclusions depend on uncommitted bytes; HEAD alone does not identify them.
 - Deployment/compatibility requirements and any limit on which repositories or components were investigated.
 - Phase-specific readiness and a short reason.
 - A change table with concrete evidence and validation behavior.
 - Only the gaps that remain relevant, stating whether they block this phase or belong to later verification.
+
+For a design handoff, make affected responsibilities explicit. Distinguish new code and changed
+contracts from reused behavior, configuration/version coordination and retained or removed behavior.
+Do not count a dependency's existing in-progress implementation as work to build again. Preserve exact
+accepted constraints without adding unstated restrictions on their scope or cardinality.
 
 | Current behavior and evidence | Required target | Retain / replace / remove | Affected files | Validation scenario |
 | --- | --- | --- | --- | --- |
@@ -123,10 +128,18 @@ remain conservative. Source input freshness does not refresh the runtime observa
 
 When evaluating readiness, name the phase: design, implementation, integration or release. Apply `READY`, `READY_WITH_GAPS` or `BLOCKED` to that phase only. List later phases as pending when they were not evaluated. For a factual investigation without a next-phase decision, describe what is established and uncertain instead of inventing a phase or blocking on an unchosen future design.
 
-For each gap, explain the missing fact, the action it affects, why existing evidence cannot settle it, and when an answer is needed. Only call it blocking when the next action depends on the answer. Distinguish a potentially breaking unknown contract from a known contract whose live environment has not been tested.
+For each gap, explain the missing fact, the action it affects, why existing evidence cannot settle it, and when an answer is needed. Separate unresolved business decisions from technical lookup/integration work and tunable proposals; use an owner only when known. Latest accepted user decisions remain settled. Only call a gap blocking when the next action depends on the answer. Distinguish a potentially breaking unknown contract from a known contract whose live environment has not been tested.
 
 ## Keep the evidence timeline intact
 
 Separate three kinds of statements: pre-change facts, accepted target decisions and implementation/validation results. Preserve the original baseline. Append dated discoveries or store follow-up evidence under a new filename; do not overwrite it with final-state descriptions.
+
+When new evidence changes the planning conclusion, update a short current-conclusion pointer in the
+entry report. Link the dated correction and name the superseded claim and its scope. This pointer is
+navigation to the effective handoff, not a rewrite of the historical evidence. For example, “absent from
+default at commit A” can remain true while a later candidate implementation changes the plan from new
+development to version coordination. Carry latest accepted decisions into this pointer or its linked
+follow-up so a fresh reader does not reopen resolved questions. A file appended at the end without
+supersession links is insufficient when the opening would lead the next phase to different work.
 
 After implementation, record verification in a separate section or file, including what actually ran, its result and material limits. Reading a test, passing a mock-based test and validating a production integration are different claims. Do not add passed-test labels retroactively to pre-change evidence.

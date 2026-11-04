@@ -76,6 +76,17 @@ are established. None of these labels means the user approved a design or that t
 
 ## Carry the evidence into the design
 
+Resolve the report's effective conclusion before using it. Read its current-conclusion pointer, relevant
+dated addenda and linked follow-ups. A later correction may supersede an absence claim without changing
+the older master snapshot. Preserve both evidence scopes; use the correction for current planning.
+The latest explicit user decisions override earlier candidate choices. Do not copy stale readiness,
+repository requests or resolved questions from the report's opening into the design.
+
+Carry forward the business goal, current capability and gap, component responsibilities, settled
+boundaries and unresolved decisions. Recover missing background from supplied requirements or a bounded
+source check; a detailed code inventory cannot substitute for it. Separate code changes from reuse,
+configuration and version coordination so in-progress dependency work is not counted twice.
+
 Use the baseline's current behavior, retain/replace/remove decisions, contract limits and observable
 validation scenarios as design inputs. Cite the report entry path and source version, distinguish
 new checks from inherited evidence, and expose the remaining gaps where they affect a decision.

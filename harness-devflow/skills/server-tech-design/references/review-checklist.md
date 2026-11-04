@@ -6,7 +6,7 @@ checklist or a sequence of “not applicable” explanations into the document u
 
 ## Can the reader explain the solution?
 
-- [ ] The opening explains the current problem, intended change, outcome, and scope.
+- [ ] The opening explains the business goal, existing capability, specific gap, intended result and scope; it does not start and end with the proposed module.
 - [ ] A backend engineer with about two years of experience but no project-domain knowledge can follow the explanation: necessary business context and terms are introduced before mechanisms and details, unless the user specified a different audience.
 - [ ] A reader can restate the core solution and the important decisions without tracing implementation details.
 - [ ] One concrete example goes from input to result; relevant lifecycle transitions and failure outcomes are clear.
@@ -20,13 +20,13 @@ checklist or a sequence of “not applicable” explanations into the document u
 
 - [ ] Applicable existing recon was discovered from supplied/project artifact locations, including hidden or ignored `.artifacts`; reused claims match this repository, task and relevant current code, and the baseline is cited without being overwritten.
 - [ ] The proposed choice and meaningful trade-offs are explained; no alternative was invented just to fill a table.
-- [ ] Changed contracts, state and configuration behavior, compatibility, and consequential failure paths are specified.
+- [ ] Affected responsibilities distinguish new code and changed contracts from reuse, configuration/version coordination and retained behavior; state, compatibility and consequential failure paths are specified.
 - [ ] Relevant authorization, isolation, sensitive-data, outbound-access, and resource boundaries remain visible.
 - [ ] New traffic, dependencies, storage, or latency costs are assessed when material, with assumptions or evidence.
 - [ ] Numbers distinguish measurements, estimates, and targets; organizational requirements have a source and scope.
 - [ ] Existing behavior, proposed changes, implemented work, and verified results are not conflated.
 - [ ] Consequential claims point to the relevant symbol/configuration read site or document section and version; local snapshots and runtime observations keep their evidence limits.
-- [ ] Open items affect a real decision or readiness claim and identify the missing information or next step.
+- [ ] Open items distinguish unresolved business contracts, technical evidence gaps and tunable proposals; each names its consequence, next action and required milestone. Resolved user decisions do not reappear as questions.
 
 ## Can the design be observed, verified, and released?
 

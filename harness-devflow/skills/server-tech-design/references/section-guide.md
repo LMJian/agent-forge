@@ -20,7 +20,7 @@ configuration exists simply because the flow needs one.
 
 | Concern | Questions to resolve | When to expand |
 |---|---|---|
-| Background and scope | What happens today, what problem changes, and what outcome demonstrates success? | Explain unfamiliar context; omit project history that does not explain a decision. |
+| Background and scope | What is the user's goal, what already works, which gap remains, and what result changes? Who owns new work, reuse and integration? | Explain unfamiliar context and consequential module placement; omit history that does not explain a decision. |
 | Core decisions | What is chosen, why, and what important trade-off is accepted? | Compare real alternatives when their cost, correctness, or compatibility differs materially. |
 | Interfaces and contracts | Who calls what, with which inputs and outputs? What validates, authenticates, authorizes, or deduplicates the request? | New or changed contracts, consumer changes, sensitive data, or non-obvious limits. |
 | Data, configuration, and cache | Where does each value come from, who owns it, and how is it discovered, identified, stored, updated, or removed? | New state, persistence or consistency behavior, dynamic discovery, or migration. |
