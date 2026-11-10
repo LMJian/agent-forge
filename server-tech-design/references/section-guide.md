@@ -7,14 +7,30 @@ filling the document with “N/A” or explanations of deleted headings.
 
 ## Build the reading path
 
-A useful starting path is **problem and scope → solution overview → how it works → verification and
-rollout**. Name the detailed sections after the actual design questions. Keep a section only if it has
-an independent purpose; place a failure rule beside the step that can fail, then reference it elsewhere.
+Start with the problem and the intended result. For a cross-component design, use one representative
+scenario to draft the following views before expanding the implementation. Confirm each important
+dependency, input source, and state owner against the available evidence.
 
-Before drafting the outline, walk a representative scenario from input to result. Include relevant
-lifecycle transitions, such as creation, update, deletion, or rollback. Confirm the sources of inputs,
-ownership of state, selection rules, and externally observable results. Do not assume a component or
-configuration exists simply because the flow needs one.
+- **Module dependency diagram.** Show the entry point, the components that own decisions or state,
+  and the dependencies that affect the design. Give each component its name and role. Use directional
+  arrows with short labels that say what crosses each boundary. Identify added, changed, and reused
+  components with text labels or a legend. Group internal details under their owner.
+- **Core interaction sequence.** Start with a concrete trigger and follow it to an observable result.
+  Show who calls whom, where consequential inputs come from, and where state is written or read.
+  Mark what each important response means and where work continues asynchronously. Choose branches
+  that explain a material route, state, or outcome. Summarize repeated calls in a loop or a short note.
+  Put longer variants in the detailed design.
+- **Change scope (Spec and Plan).** In the Spec, name the affected service or module and its repository
+  where relevant. Put the concrete change and the gap it addresses together. Separate code changes,
+  contract or dependency updates, configuration, and reuse or integration work. In the Plan, give each
+  phase an owner, prerequisite, and result that allows the next phase to start. For example, verify
+  that an existing client reads data produced by the new writer before enabling writes. Link open
+  decisions from the Spec or Plan when they affect scope or work order.
+
+Use the same names and responsibilities across the views. Keep each diagram focused on its own
+question. Add a short walkthrough in sequence order when a reader needs it to connect the steps.
+For a small change, a short paragraph or table can cover the relevant answers. Place detailed
+contracts and failure rules beside the behavior they govern, then link to them where needed.
 
 ## Engineering coverage — apply where relevant
 

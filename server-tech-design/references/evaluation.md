@@ -40,9 +40,10 @@ Lark publication. No scenario authorizes real uploads merely because its simulat
 Preserve the task's meaning and scope; do not reward longer
 documents, invented blockers, arbitrary word counts or merely mentioning the name ASD-STE100.
 
-`first-delivery-cross-service` checks a new design's first delivered artifact, including business
-background, the effective scope after recon corrections, settled user boundaries and actionable open
-items. `repair-three-dimensions` checks whether one whole-scope repair fixes background/scope, reader
+`first-delivery-cross-service` checks whether the opening of the first artifact explains the module
+dependencies, interaction sequence, and Spec and Plan without relying on later chapters. It also
+checks consistency with the effective baseline, accepted decisions, and open items.
+`repair-three-dimensions` checks whether one whole-scope repair fixes background/scope, reader
 explanation/Chinese language and unresolved-item coverage together. Use the first result before any
 maintainer hint; later corrections are a separate result, not a retroactive first-pass success.
 Keep `writing-clean-repeat` as the counterexample: a complete unchanged design should not acquire

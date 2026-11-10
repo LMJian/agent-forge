@@ -2,8 +2,9 @@
 
 Use this when the requested output contains a diagram. Choose a diagram only when it clarifies a flow,
 boundary or relationship. Verify its meaning against the text and evidence before checking its syntax.
-Check important actors, arrow direction, synchronous/asynchronous completion, failure paths and labels.
-Label proposed components and uncertain relationships; rendering cannot prove they exist.
+For a module diagram, check dependency direction, ownership, and change labels against the Spec.
+For a sequence, trace the example through the shown calls, state changes, and completion points.
+Use labels to identify proposed components and uncertain relationships.
 
 Keep the following states separate for each diagram that matters to the deliverable:
 

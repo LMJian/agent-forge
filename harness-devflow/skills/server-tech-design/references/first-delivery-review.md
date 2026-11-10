@@ -4,23 +4,29 @@ Use this for a new design or substantial revision. This is an internal content r
 step, fixed document outline, separate report, or mandatory JSON artifact. For a narrow edit, apply only
 the affected questions. Keep one primary explanation for each concept.
 
-## Read what a new reader receives
+## Read the opening on its own
 
-Read the draft without relying on the conversation or the recon author's unstated knowledge. For each
-question below, find the passage that answers it. A remembered answer without a document passage is a
-missing explanation. Revise it before publication, then follow the affected terms, examples and diagram
-labels. Do not wait for the user to request these checks separately.
+Read only the background, overview, and change scope. For a cross-component design with meaningful
+dependencies and call order, inspect both diagrams or their documented source fallback. Find where
+the reader can answer each applicable question. Put missing answers in the opening before reviewing
+the detailed design.
 
-| Reader question | Evidence the draft needs |
+| Reader question | Evidence to find in the opening |
 | --- | --- |
-| Why does this change exist? | The business trigger and desired user result, what already works, and the specific gap. An opening that only says “add module X” does not explain the background. |
-| What work belongs to this change? | Affected responsibilities and boundaries: new code, changed contracts, reused behavior, configuration/version dependencies, and retained or removed behavior where relevant. A component list alone is insufficient. Explain why the proposed module owns the gap when that choice matters. |
-| How does one scenario reach its result? | Inputs, responsible actors, intermediate state and observable result. Explain domain terms and distinguish easily confused objects before details depend on them. Follow the material failure branch as well as the successful path. |
-| What is still unknown? | Real unresolved decisions, evidence gaps or tunable proposals, with the consequence, next action and point when an answer is needed. Keep accepted requirements settled. If no relevant gap exists, do not manufacture a pending section. |
+| Why does this change exist? | The user scenario, existing capability, specific gap, and intended result. |
+| How are the modules connected? | The entry point, responsibilities, state owner, and direction and purpose of the dependencies. |
+| How does the main scenario reach its result? | The call order, origins of consequential inputs, important state changes, and what the caller or user observes at each completion point. |
+| What will change and why? | Check each code change in its Spec row or paragraph. It names the component, the changed behavior, and the reason together. The Spec separates code work, contract updates, configuration, and reuse or integration. |
+| How will the work be completed? | The Plan names the owner, prerequisite, and expected observable result for each relevant phase. |
 
-Scale detail to the task. A business capability can be in scope while part of its contract remains
-unresolved; identify both without relying on unstated domain knowledge. When a dependency
-already has relevant work in progress, separate reuse and integration from implementing it again.
+Compare the diagrams, Spec, and Plan. Check that the same component owns each key action or state
+change, the call order follows the dependencies, and the Plan covers the Spec's work. Repair any
+mismatch where the reader first encounters it. Use the smallest representation that answers the
+questions for the current scope.
+
+In the detailed design, trace the same scenario through its consequential failure paths. Identify
+unresolved decisions and evidence gaps with their consequence, next action, and required milestone.
+Keep accepted decisions settled and distinguish candidate work from deployed capability.
 
 ## Apply the writing rules to the whole requested scope
 

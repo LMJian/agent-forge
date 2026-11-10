@@ -85,16 +85,16 @@ Resolve consequential gaps before treating the solution as settled. Ask only for
 that cannot reasonably be inferred; continue independent work. Explain real alternatives for significant
 trade-offs, without inventing options merely to populate a comparison table.
 
-### 2. Organize around reader questions
+### 2. Draft the overview and change scope first
 
-Read [section-guide.md](references/section-guide.md) when choosing or restructuring sections. Select a
-small set of questions the document must answer, then assign each section one primary responsibility.
-Follow the causal flow: problem and scope, solution overview, how it works, then verification and rollout.
-Rename, merge, or expand sections to fit the actual design.
+For a cross-component design where both dependencies and call order matter, draft the module dependency
+diagram, core interaction sequence, and change scope (Spec and Plan) together. Use the same scenario and
+component names across them. Put these near the front after the problem statement, before interface and
+implementation details. Use [section-guide.md](references/section-guide.md#build-the-reading-path)
+for the contents of each view.
 
-For a new draft, [template.md](references/template.md) is an optional starting point, not a checklist to
-fill. An inapplicable concern normally needs no public placeholder; explain exclusions only when a
-required template or a plausible reviewer misunderstanding calls for it.
+Use the simplest representation that answers the reader's questions for a small change.
+[template.md](references/template.md) is an optional starting point. Follow any required template.
 
 ### 3. Draft at the right depth
 
@@ -126,9 +126,9 @@ that affect implementation, compatibility, validation, or release; mark their co
 ### 5. Review comprehension and deliver
 
 For a new draft or a substantial revision, perform the [first-delivery review](references/first-delivery-review.md)
-on the actual local draft before publishing or handing it off. Answer from document passages, not from
-facts held only in the conversation. Repair missing explanations before first delivery; readback equality
-does not establish writing quality. A narrow edit checks the affected explanation and its dependencies.
+on the actual local draft before publishing or handing it off. Read the opening on its own and repair
+missing explanations there. Then check the detailed design and its consistency with the opening.
+A narrow edit checks the affected explanation and its dependencies.
 Use [review-checklist.md](references/review-checklist.md) for the applicable engineering checks, without
 adding sections solely to tick boxes.
 

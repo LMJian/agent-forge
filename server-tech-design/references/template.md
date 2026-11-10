@@ -9,17 +9,30 @@ and deployment status factual. Add an unresolved item only when its answer affec
 
 ---
 
-# 1. Problem and scope
+# 1. Problem
 
-_Explain the current behavior, the problem, the intended outcome, and the scope of this change.
+_Explain the current behavior, the problem, and the intended outcome.
 Use a meaningful measure of success where available; identify a proposed target as such._
 
-# 2. Proposed solution
+# 2. Core design
 
-_One sentence for the solution, followed by its few key decisions and their effects. Include a compact
-main-flow diagram when it lowers reading effort. Explain significant trade-offs and real alternatives._
+_State the solution in one sentence. Use the views below when they answer separate questions.
+Explain significant trade-offs beside the relevant decision._
 
-# 3. How it works
+## Module dependencies
+
+_Use a module dependency diagram to show roles, important dependencies, state ownership, and change status._
+
+## Core interaction
+
+_Use a sequence diagram to follow one scenario through the main calls, state changes, and observable result._
+
+# 3. Change scope
+
+_The Spec gives the change, reason, and delivery category per affected component. The Plan gives the
+dependency order, owner, and completion criterion for each phase. Combine them in a compact form when useful._
+
+# 4. How it works
 
 _Replace these prompts with sections named after the actual design questions. Follow one representative
 example from input to result. Trace relevant preparation, state changes, updates, failures, and removal
@@ -33,11 +46,11 @@ _Place correctness, security, compatibility, and resource constraints alongside 
 Explain what callers observe on failure and what continues working. Link detailed mechanics only when
 needed; do not repeat each constraint in another chapter._
 
-# 4. Verification and rollout
+# 5. Verification and rollout
 
-_Explain how to verify the important behavior. Distinguish planned checks from executed results, and
-link actual evidence when available. Address material performance or capacity assumptions here or beside
-the affected decision._
+_Expand the verification and rollout decisions that need detail beyond the Plan.
+Distinguish planned checks from executed results and link actual evidence when available.
+Address material performance or capacity assumptions here or beside the affected decision._
 
 _Identify the essential monitoring; reuse existing metrics when adequate. Keep this table compact and
 adapt its columns to the change._
