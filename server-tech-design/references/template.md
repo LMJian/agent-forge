@@ -38,9 +38,9 @@ _Replace these prompts with sections named after the actual design questions. Fo
 example from input to result. Trace relevant preparation, state changes, updates, failures, and removal
 without requiring every design to have all of these stages._
 
-_Introduce the contract or configuration structure before examples. Identify sources of truth and
-ownership; explain confusing concepts together. Keep the exact contract accessible through an annotated
-schema or field reference, and label illustrative or unvalidated payloads._
+_Introduce the contract or configuration structure before examples. Follow
+[contract representation guidance](section-guide.md#sources-of-truth-and-contracts) for types, encoding,
+sources and ownership. Label illustrative or unvalidated payloads._
 
 _Place correctness, security, compatibility, and resource constraints alongside the behavior they govern.
 Explain what callers observe on failure and what continues working. Link detailed mechanics only when

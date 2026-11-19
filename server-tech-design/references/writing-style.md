@@ -104,10 +104,9 @@ At relevant boundaries, distinguish the original input, intermediate representat
 parameters and final output. Explain material field selection and transformation where it occurs.
 Reception or forwarding alone does not prove downstream use or a user-visible result.
 
-For a configuration or interface, establish structure before examples. Use an annotated schema or a
-field table as its main reference; avoid repeating every field in both. State what comes from the key,
-environment, caller, or configuration. Distinguish comments and illustrative values from a publishable
-payload, and distinguish a proposed contract from an implemented or tested one.
+For a configuration or interface, establish structure before examples. Choose its primary reference
+using [contract representation guidance](section-guide.md#sources-of-truth-and-contracts), and explain
+each field once. Distinguish proposed contracts and illustrative values from implemented behavior.
 
 ## 4. Choose a representation that reduces work for the reader
 

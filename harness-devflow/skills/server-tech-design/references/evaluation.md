@@ -49,5 +49,11 @@ maintainer hint; later corrections are a separate result, not a retroactive firs
 Keep `writing-clean-repeat` as the counterexample: a complete unchanged design should not acquire
 invented findings, new mechanisms or another version merely because it was checked again.
 
+The contract cases cover nested storage types/expiry, message shape versus consumer groups,
+declared PB models versus application encoding, preserved outlines/diagram roles, and complete
+configuration/access explanations. Check corrected output against the supplied code/configuration;
+confirm the retained bad draft fails that same check. Executing the fixture serializers/receivers
+can validate examples, but does not establish that an agent followed the Skill or that prose is clear.
+
 Keep evaluation results outside the distributed Skill. A maintenance summary should distinguish
 automated checks, manual walkthroughs, independent agent runs and live-service checks.

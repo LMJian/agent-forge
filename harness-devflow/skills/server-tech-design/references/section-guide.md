@@ -14,7 +14,8 @@ dependency, input source, and state owner against the available evidence.
 - **Module dependency diagram.** Show the entry point, the components that own decisions or state,
   and the dependencies that affect the design. Give each component its name and role. Use directional
   arrows with short labels that say what crosses each boundary. Identify added, changed, and reused
-  components with text labels or a legend. Group internal details under their owner.
+  components with text labels or a legend. Group internal details under their owner. This is a module
+  graph, not a sequence diagram; include clients or agents when they participate in the main scenario.
 - **Core interaction sequence.** Start with a concrete trigger and follow it to an observable result.
   Show who calls whom, where consequential inputs come from, and where state is written or read.
   Mark what each important response means and where work continues asynchronously. Choose branches
@@ -48,7 +49,7 @@ contracts and failure rules beside the behavior they govern, then link to them w
 | Monitoring | What proves the system is available, correct enough for its intended use, and operating within budget? | Use the metric guidance below; expand only the important diagnostic dimensions. |
 | Verification and rollout | How will the critical behavior be checked, enabled, monitored, stopped, and restored? | New behavior or deployment risk; state dependency order and rollback prerequisites. |
 
-## Sources of truth and terminology
+## Sources of truth and contracts
 
 Explain related concepts together when they can be confused: configuration identity versus publication
 revision, desired state versus usable state, or loading a capability versus selecting it for traffic.
@@ -59,9 +60,36 @@ context, derived from a key, or explicitly configured. Repeated representations 
 an owner and a consistency rule; add a redundant field only when its validation or operational purpose
 justifies the extra state.
 
-Keep the exact contract accessible. Put a schema or compact contract description before detailed
-examples. Use either annotated fields or a field reference as the primary explanation; examples should
-illustrate behavior rather than duplicate the reference. Identify examples that are incomplete or untested.
+For implementation-aligned updates, verify the changed branch against the requested base (for example,
+master), then explain the resulting design directly. Readers should not need the previous document or
+chat history. Keep current, proposed, deployed and verified behavior distinct; do not infer deployment
+from a code diff. Reconcile the overview, diagrams, contracts, Spec and Plan after responsibilities change.
+
+Choose the contract representation by the reader's question:
+
+- **Nested persisted values and messages:** prefer the actual project's struct/type or schema, with
+  field explanations in comments. Preserve nesting, map/list element types, optionality, units and
+  serialization names. Use Go structs for a Go project, not as a universal language requirement.
+  Label excerpts and omit only irrelevant fields; do not invent fields or defaults to fill a template.
+  Flat field tables alone do not show the shape of a nested value. Use tables for mappings/comparisons.
+- **Storage:** show the key pattern separately from the value type. Explain ownership, encoding,
+  retention/expiry and deletion/update behavior. Include logical growth, root/index size and update
+  costs when material; splitting a value into pages does not establish a bounded aggregate or hot key.
+- **MQ:** show the message type and the actual topic, producer, consumer and consumer-group mapping.
+  Distinguish configured group names, resolved physical groups and worker instances when they differ;
+  derive counts from the actual consumer configuration rather than counting screenshot rows or replicas.
+- **Push/RPC/HTTP:** distinguish the declared model, envelope and actual wire encoding at each layer.
+  A PB declaration alone does not prove PB binary, protobuf JSON or application JSON transport. Follow
+  the serializer and receiver; show who calls/parses/applies the data, at what time, and what the actual
+  failure/gap response is. Do not introduce a new fallback or broaden a success guarantee while explaining.
+- **Configuration and access:** give the applicable namespace/path/key, annotated value shape, field
+  sources/defaults and consumer. For changed endpoints/dependencies, record the domain/path/method,
+  caller/callee, login/authentication/authorization and required service permission/security review.
+  Distinguish existing, new, submitted and effective items from evidence. Do not invent ACLs or approvals.
+
+Explain each field in one primary place. A small payload example can clarify encoding or behavior;
+comments and illustrative values are not a copy-paste production JSON payload. These concerns belong
+in their owning sections and do not require separate chapters, repeated tables or a second checklist.
 
 ## Monitoring: define metrics and their meaning
 

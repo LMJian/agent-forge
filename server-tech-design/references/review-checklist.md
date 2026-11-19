@@ -14,6 +14,7 @@ checklist or a sequence of “not applicable” explanations into the document u
 - [ ] Similar concepts are distinguished before use; diagrams and prose agree on responsibility and timing.
 - [ ] Data units, identifiers and failure scopes are distinct; one entity keeps its name across stages, and one term does not hide unrelated meanings.
 - [ ] Relevant input, intermediate data, downstream parameters and final output remain distinct; no later-stage result is inferred solely from an earlier handoff.
+- [ ] Applicable [contracts](section-guide.md#sources-of-truth-and-contracts) expose nested types, actual encoding, storage lifetime and consumer/access mappings; prose and examples agree with the source.
 - [ ] Each section answers a distinct question, and its position follows the design's reasoning or execution flow.
 
 ## Is the relevant design complete and evidenced?

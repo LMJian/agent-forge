@@ -28,7 +28,9 @@ Standalone design work does not require starting Harness.
 - **Establish the core solution before choosing headings.** A polished outline cannot repair an
   incomplete flow or an unresolved source of configuration, identity, or routing.
 - **Review dimensions are not mandatory chapters.** Check the relevant engineering concerns internally;
-  organize the document around the change. Preserve genuinely required sections in a user-provided template.
+  organize the document around the change. When updating an existing document, keep its chapter order
+  and organization unless the requested scope includes restructuring. Correct the owning sections
+  and their connections; do not override an explicit instruction to preserve the outline.
 - **Keep consequential constraints visible.** Correctness, security, compatibility, and rollout constraints
   belong beside the decision or flow they constrain. Move exhaustive implementation detail to a reference
   or appendix when it would interrupt understanding.
@@ -103,7 +105,8 @@ conclusion and the main flow. Define easily confused concepts and their relation
 them. Prefer a focused diagram when it reduces explanation; place details where the reader needs them.
 
 Use one primary explanation for a concept, contract, or failure rule. Annotated schema, field tables,
-and examples have different purposes; avoid repeating the same field reference in all three.
+and examples have different purposes. Follow the [contract representation guidance](references/section-guide.md#sources-of-truth-and-contracts)
+for nested structures, wire formats and integration dependencies; avoid repeating full field references.
 
 Cite the baseline entry path, relevant source version and any newly verified differences near the
 decisions they support or in a short source note. Preserve the original recon files; place the design

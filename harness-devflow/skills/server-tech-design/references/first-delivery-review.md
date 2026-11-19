@@ -27,23 +27,17 @@ questions for the current scope.
 In the detailed design, trace the same scenario through its consequential failure paths. Identify
 unresolved decisions and evidence gaps with their consequence, next action, and required milestone.
 Keep accepted decisions settled and distinguish candidate work from deployed capability.
+Check contract examples against their actual types, serializers and consumers using
+[contract representation guidance](section-guide.md#sources-of-truth-and-contracts). A field inventory
+alone does not establish nesting, wire encoding, storage lifetime or the deployed consumer mapping.
 
 ## Apply the writing rules to the whole requested scope
 
-Use [writing-style.md](writing-style.md). Read prose, tables, examples and diagram labels together.
-Check actual understanding barriers rather than counting characters or requiring a glossary:
-
-- Resolve domain-only abbreviations, conversation question numbers, unclear aliases and vague actors.
-  Introduce a term where it is needed; later references should keep the same name.
-- Give each sentence one action or judgment. Preserve the original conjunctions, ordering, quantities,
-  negation and transaction boundary when splitting a sentence. Do not fragment one judgment's necessary
-  conditions or replace a coherent paragraph with one sentence per line.
-- Distinguish accepted, persisted, notified, applied and completed states when the flow uses them.
-  A bounded retry policy does not guarantee eventual delivery. Do not strengthen evidence or guarantees
-  through more confident wording.
-- Consolidate unresolved business contracts, technical integration checks and proposed operating values
-  at an appropriate place. Consequential constraints still belong beside the flow they govern; reference
-  the primary explanation rather than repeating a full field list or policy.
+Apply [writing-style.md](writing-style.md) to prose, tables, examples and diagram labels together.
+Check understanding and preserved meaning, not word counts or compliance slogans. Keep coherent
+paragraphs and remove repeated field explanations. Distinguish accepted, persisted, notified,
+applied and completed states; bounded retries do not guarantee eventual delivery. Place unresolved
+contracts and evidence gaps beside the behavior they affect without repeating the whole policy.
 
 Do not put this checklist or a language-compliance slogan into the design. Do not claim formal STE
 certification. Follow [delivery.md](delivery.md) after content review; publication/readback and semantic

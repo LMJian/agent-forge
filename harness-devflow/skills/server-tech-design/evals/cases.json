@@ -226,6 +226,83 @@
         "解释或移除无用项目简称、专题 B 及无依据的口号，写清动作主体、条件和时序；不机械拆碎必要条件。",
         "业务类型/字段、实际索引名和批量条数建议分别标明状态、影响及下一步；JSON 示例逐字保留，不新增业务约束或虚构验证。"
       ]
+    },
+    {
+      "id": "nested-storage-contract",
+      "request": "修正 design.md 的存储说明。保留章节顺序和批注，用项目真实类型展示嵌套 Value，字段解释放注释里。只改本地文档，不修改代码。",
+      "files": {
+        "store.go": "package sample\nimport \"time\"\nconst RecordTTL = 24*time.Hour\nfunc Key(tenant, job string) string { return \"job:\"+tenant+\":\"+job }\ntype Record struct {\n Revision int64 `json:\"revision\"`\n Jobs map[string]Job `json:\"jobs\"`\n}\ntype Job struct {\n Labels []string `json:\"labels\"`\n DeadlineMS *int64 `json:\"deadline_ms,omitempty\"`\n}\n// Save serializes Record as application JSON and writes the key with RecordTTL.\n",
+        "design.md": "# 任务缓存\n\n## 存储\n<!-- 保留批注: storage-7 -->\n| 字段 | 类型 |\n|---|---|\n| revision | number |\n| jobs | object |\n缓存用于赋能稳定性闭环。\n\n## 验证\n验证计划尚未执行。\n"
+      },
+      "criteria": [
+        "章节、批注和验证原文保留；仅修正存储说明。",
+        "Value 使用项目 Go struct 展示 Record、map[string]Job、Job 和 []string；保留 JSON 标签。",
+        "DeadlineMS 保持 *int64 和 omitempty，注释写明毫秒、可缺失，不改成必填或秒。",
+        "Key 与 Value 分开说明；记录实际为应用 JSON、TTL 24 小时，不把每个 Job 解释为独立 TTL。",
+        "删除空泛口号，不增加副本、重试、迁移或虚构的清理任务。"
+      ]
+    },
+    {
+      "id": "mq-topology-contract",
+      "request": "根据 message.go 和 consumers.json 修正 MQ 章节，展示消息结构、Topic 和消费组关系。不要根据副本数新建消费组，不改其他章节或代码。",
+      "files": {
+        "message.go": "package sample\ntype Message struct {\n EventID string `json:\"event_id\"`\n Jobs []JobRef `json:\"jobs\"`\n}\ntype JobRef struct { ID string `json:\"id\"` }\n// Producer encodes Message with encoding/json and publishes to the configured topic.\n",
+        "consumers.json": "{\"topic\": \"jobs.events\", \"producer\": \"svc.ingress\", \"consumers\": [{\"service\": \"svc.worker\", \"group\": \"cg_job_worker\", \"instances\": 2}], \"lane_suffix\": false}",
+        "design.md": "# 任务处理\n\n## MQ\n消息有 event_id 和 jobs。两个实例分别使用两个消费组。\n\n## 上线\n线上连接尚未验证。\n"
+      },
+      "criteria": [
+        "消息使用带注释的真实嵌套 struct，jobs 保持 []JobRef，不改成字符串或裸 ID 数组。",
+        "列清 jobs.events、svc.ingress、svc.worker、cg_job_worker 的对应关系。",
+        "明确配置中是一个消费组、两个实例；lane_suffix=false，不虚构泳道后缀或新消费组。",
+        "不把配置存在写成已连接/已消费，保留上线原文。"
+      ]
+    },
+    {
+      "id": "push-wire-contract",
+      "request": "基于 types.proto 和 transport.py 写接入说明，明确模型类型、meta 编码、客户端处理。修正 draft.md，保持原章节，不创建接口、开关或新的兼容逻辑。",
+      "files": {
+        "types.proto": "syntax = \"proto3\";\nmessage Rule { string id = 1; }\nmessage RuleConfigPush { int64 revision = 1; repeated Rule upserts = 2; repeated string deleted_ids = 3; }\n",
+        "transport.py": "import json\n\ndef encode_meta(delta):\n    return json.dumps(delta).encode(\"utf-8\")\n\ndef receive(meta, revision, rules):\n    delta = json.loads(meta.decode(\"utf-8\"))\n    if delta[\"revision\"] != revision + 1:\n        return \"pull\", revision, rules\n    updated = dict(rules)\n    for rule in delta[\"upserts\"]:\n        updated[rule[\"id\"]] = rule\n    for key in delta[\"deleted_ids\"]:\n        updated.pop(key, None)\n    return \"applied\", delta[\"revision\"], updated\n",
+        "draft.md": "# 规则同步\n\n## 协议\n使用 PB 类型，所以收到 meta 后按 PB 二进制解码。\n\n## 客户端处理\n每次 Push 都用空列表替换本地全部规则。\n"
+      },
+      "criteria": [
+        "区分 .proto 定义与运行时序列化，meta 实际为 UTF-8 应用 JSON bytes，不是 PB 二进制或默认 protobuf JSON。",
+        "接收端按 UTF-8 解码并解析 JSON；upserts 按 id 更新，deleted_ids 删除，保留未涉及的规则。",
+        "只在 revision 等于本地 revision+1 时应用；其他版本返回 pull，不推进本地版本或清空规则。",
+        "不把增量当全量；未给出外层 Envelope 的编码时标明材料未提供，不猜测或新增接口。"
+      ]
+    },
+    {
+      "id": "preserve-outline-and-diagrams",
+      "request": "按 diff.txt 更新 design.md，保留现有章节顺序和批注。整体架构用模块依赖图，交互用时序图，包含客户端。按实现结果写，不要求读者知道旧方案。不修改代码，不发布文档。",
+      "files": {
+        "diff.txt": "base=master; head=feature/job-rules\n新增：svc.gateway 接收客户端规则数据，保存并投递；svc.worker 只调用 svc.agent.send。\n复用：svc.agent.send 投递消息。\n删除：svc.worker 内的数据解析和报告模板，不新增授权巡检。\n状态：本地验证完成，未部署。\n",
+        "design.md": "# 规则任务\n\n## 1 背景\n用户希望在客户端条件满足时收到消息。\n\n## 2 整体架构\n<!-- 保留批注: architecture-3 -->\n```mermaid\nsequenceDiagram\n  participant Worker\n  Worker->>Worker: 解析并生成报告\n```\n\n## 3 交互时序\n客户端未画入。\n\n## 4 Spec\nWorker 解析、统计和投递。\n\n## 5 Plan\n已部署完成。\n"
+      },
+      "criteria": [
+        "章节顺序和批注保留；不追加模板章节或要求重新审批大纲。",
+        "整体架构是模块图、交互是时序图；两图包含客户端，并与 Gateway/Worker/Agent 职责一致。",
+        "Spec 说明 Gateway 保存和投递、Worker 仅调用 Agent，复用与新增区分，不保留报告模板或新增巡检。",
+        "Plan 保留未部署事实，写出实际依赖顺序，不能把本地验证改成已上线。",
+        "正文直接说明最终设计，不依赖原方案/聊天代号；无渲染工具时不声称语法和视觉检查通过。"
+      ]
+    },
+    {
+      "id": "complete-integration-contract",
+      "request": "依据现有材料补齐设计中的配置和接入说明，使用注释解释配置结构。只改本地 draft.md，不修改生产配置、不申请权限。只写材料支持的事实，不新增章节。",
+      "files": {
+        "config.json": "{\"namespace\": \"svc.jobs\", \"directory\": \"/default\", \"key\": \"job_config\", \"value\": {\"enabled\": false, \"topic\": \"jobs.events\"}}",
+        "routes.json": "{\"domain\": \"https://jobs.example.test\", \"routes\": [{\"method\": \"GET\", \"path\": \"/v1/jobs\", \"caller\": \"client\", \"callee\": \"svc.gateway\", \"login_required\": true}, {\"method\": \"POST\", \"path\": \"/hooks/vendor\", \"caller\": \"vendor\", \"callee\": \"svc.gateway\", \"login_required\": false}], \"rpc\": {\"caller\": \"svc.gateway\", \"callee\": \"svc.worker\", \"method\": \"Deliver\", \"acl_status\": \"submitted\"}}",
+        "handler.py": "def client_handler(ctx, cfg):\n    if not ctx.user_id:\n        return \"login invalid\"\n    if not cfg.enabled:\n        return []\n    return ctx.jobs\n",
+        "draft.md": "# 任务接入\n\n## 配置\n关闭开关后不会校验登录。\n\n## 接口与依赖\n两个接口均不用登录。RPC ACL 已就绪。\n"
+      },
+      "criteria": [
+        "准确写出 svc.jobs、/default、job_config 和 value.enabled/value.topic；注释或带注释类型说明字段，不把注释作为可直接发布的严格 JSON。",
+        "列明给定域名、两条 method/path、调用方与接收方；GET 必须登录，Webhook 不要求登录，不能泛化为全部接口同一策略。",
+        "handler 先校验登录再判断 enabled，不能说开关关闭就不会发生登录错误。",
+        "RPC svc.gateway→svc.worker.Deliver 权限是已提交而非已生效；不执行申请、发布或虚构安全审批。",
+        "保留章节，相关说明归入所属章节，不额外扩成上线/安全检查清单。"
+      ]
     }
   ]
 }
