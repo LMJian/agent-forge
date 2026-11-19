@@ -77,5 +77,48 @@
     "expected_facts": [],
     "report_required": ["结果未确认", "background.md"],
     "report_forbidden": ["文档创建失败且未写入", "文档已创建"]
+  },
+  {
+    "id": "bounded-local-brief",
+    "prompt": "只读整理一份本地简短背景，回答 Atlas 当前决定和未确认项，给非技术同事看。相关材料已提供；不需要审计、断点恢复、关系图或网页。",
+    "read_only": true,
+    "max_calls": 2,
+    "max_report_chars": 500,
+    "allowed_artifacts": [
+      "background.md"
+    ],
+    "forbidden_commands": [
+      "check_artifacts.py",
+      "run_state.py"
+    ],
+    "sources": [
+      {
+        "id": "decision",
+        "kind": "document",
+        "text": "评审决定采用 B，减少人工操作；没有部署证据。"
+      }
+    ],
+    "expected_facts": [
+      {
+        "key": "current-B",
+        "terms": [
+          "B",
+          "减少人工操作"
+        ],
+        "status": "decided",
+        "current": true,
+        "source_ids": [
+          "decision"
+        ]
+      }
+    ],
+    "report_required": [
+      "B",
+      "decision",
+      "未验证"
+    ],
+    "report_forbidden": [
+      "已上线"
+    ]
   }
 ]

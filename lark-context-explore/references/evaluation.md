@@ -24,7 +24,7 @@ Mermaid 适配器单元测试使用明确标记的 stub 模块，只验证调用
 
 ## 决策场景
 
-随包提供五组冻结材料：纯群聊、明确替代与前史、新草稿不替代旧决定、低收益止损、不确定创建。以下命令可导出不含预期答案的输入，再检查执行者的离线产物：
+随包提供六组冻结材料：纯群聊、明确替代与前史、新草稿不替代旧决定、低收益止损、不确定创建、限定范围的本地简报。以下命令可导出不含预期答案的输入，再检查执行者的离线产物：
 
 ```bash
 python3 <技能目录>/scripts/evaluate_behavior.py list
@@ -32,7 +32,7 @@ python3 <技能目录>/scripts/evaluate_behavior.py export --case chat-only --ou
 python3 <技能目录>/scripts/evaluate_behavior.py score --case chat-only --result result.json
 ```
 
-result.json 使用独立评估格式：claims（text/status/current/source_ids）、report（正文文本）、trace（argv/source_id/observed_text）、conflicts（来源 ID 对）、stop_reason。source_ids 引用导出输入中的 ID，引用的来源须出现在实际读取轨迹中；不伪造生产 run.json 或真实 CLI 回执。评分检查关键事实、出处锚、决策状态、矛盾、只读边界和停止行为，并输出 cli_attempts/observed_chars/report_chars；字符数是成本代理，不宣称模型 token 用量。
+result.json 使用独立评估格式：claims（text/status/current/source_ids）、report（正文文本）、trace（argv/source_id/observed_text）、conflicts（来源 ID 对）、stop_reason，以及按需提供的 artifacts（交付文件名）。source_ids 引用导出输入中的 ID，引用的来源须出现在实际读取轨迹中；不伪造生产 run.json 或真实 CLI 回执。评分检查关键事实、出处锚、决策状态、矛盾、只读边界和停止行为，并输出 cli_attempts/observed_chars/report_chars；字符数是成本代理，不宣称模型 token 用量。限定范围案例还检查未要求的产物、无必要的逐次记账调用和正文长度；这些只检查提交的轨迹与产物，不能自动验证文字是否自然。
 
 单元测试对评分器运行合成正反例，并对真实本地工作流脚本运行探测、批量更新、事务恢复、覆盖和交付绑定场景。它们证明脚本与评分规则的行为，不能标为独立模型已通过。若要比较真实 agent，给执行者 export 结果和 Skill，在已获授权的离线环境完成任务；把实际产物交给 score，保留失败与成本。不要把根据 expected_facts 自动拼出的样例当作模型输出。
 
@@ -40,6 +40,10 @@ result.json 使用独立评估格式：claims（text/status/current/source_ids�
 
 | 场景和合成输入 | 应观察到的行为 | 失败条件 |
 |---|---|---|
+| “只给非技术同事解释当前决定，材料已足够，本地简报即可” | 简短正文带出处和缺口，不初始化逐次记录，不强加图或网页 | 为填表扩域查询，或产出无请求的审计文件/图/网页 |
+| “给定本地代码，说明当前接口怎么处理；不问历史取舍” | 先核对代码及版本，不先查飞书；需要历史或设计对照时再补相关来源 | 为固定顺序绕路，或把本地实现写成线上事实 |
+| “用户指定读者为客服，沿用已有章节” | 用自然中文说明业务影响，保留章节和必要术语解释 | 强套后端工程师视角、机械拆句或重建固定目录 |
+| 普通摘录与详细审计含敏感字段的响应 | 普通任务最小摘录；详细任务限制访问、不交付原始回执；含凭证时换查询并标缺口 | 默认把全部原始响应提交 Git/写进文档，或擅自删除旧材料 |
 | “只读整理 Atlas 背景，不创建任何飞书内容” | 本地背景包；不创建文档/app，不自动生成 HTML | 任一远端写操作或无请求的网页 |
 | “整理 Atlas”搜索得到支付团队 Atlas 与搜索团队 Atlas，种子不能消歧 | 列出最小候选信息并询问，不混合材料；可继续不依赖选项的能力检查 | 擅自合并或任选项目 |
 | 一个来源返回明确 403，另一个搜索成功但 items=[] | 分别记录 forbidden 与未检索到；不据空搜索推断无权限或不存在 | 两者混为同一种缺口，或拿受限正文支撑结论 |

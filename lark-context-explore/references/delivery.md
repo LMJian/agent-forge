@@ -4,7 +4,7 @@
 
 ## 绑定输入，再提交
 
-先登记 background.md、background.xml、引用的 .mmd，或 index.html。每种操作 start 绑定本次真实输入的 artifact_ids，首项为直接提交文件，其余是相关正文/图。文件哈希自动计算，不手填。
+先登记 background.md、background.xml、实际引用的 .mmd（无图时不登记），或 index.html。每种操作 start 绑定本次真实输入的 artifact_ids，首项为直接提交文件，其余是相关正文/图。文件哈希自动计算，不手填。
 
 ```json
 {"kind":"document","action":"start","artifact_ids":["xml","report","relations"]}

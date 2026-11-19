@@ -1,5 +1,7 @@
 """Exercise the real CLI against synthetic ledgers, never the configured learner data."""
 import copy
+import shutil
+from unittest import mock
 from datetime import date, timedelta
 import importlib.util
 import json
@@ -275,6 +277,76 @@ class ProgressTests(unittest.TestCase):
         broken["review_items"]["repeat"]["last_reviewed_on"] = "2026-10-16"
         self.put(broken)
         self.call("show", ok=False)
+
+    def test_updated_defaults_do_not_replace_an_existing_plan(self):
+        self.assertEqual(self.read()["profile"]["daily_minutes"], 15)
+        self.assertEqual(self.read()["profile"]["days_per_week"], 3)
+        self.save({"profile": {"daily_minutes": 60, "days_per_week": 6, "plan_months": 4},
+                   "session": session("existing")})
+        before = (self.directory / "progress.json").read_bytes()
+        self.call("init")
+        self.call("show")
+        self.assertEqual((self.directory / "progress.json").read_bytes(), before)
+        self.save({"progress": {"notes": "Synthetic follow-up; keep learner plan"}})
+        self.assertEqual(self.read()["profile"]["daily_minutes"], 60)
+        self.assertEqual(self.read()["profile"]["days_per_week"], 6)
+        self.assertEqual(self.read()["profile"]["plan_months"], 4)
+
+    def test_installed_custom_path_and_generic_default_are_separate(self):
+        skill = Path(self.temp.name) / "installed"
+        (skill / "scripts").mkdir(parents=True)
+        script = skill / "scripts/progress.py"
+        shutil.copy2(SCRIPT, script)
+        config = skill / "settings.json"
+        custom = Path(self.temp.name) / "existing-learner-data"
+        shutil.copytree(self.directory, custom)
+        config.write_text(json.dumps({"data_dir": str(custom)}))
+        before = {p.name: p.read_bytes() for p in custom.iterdir() if p.is_file()}
+        response = subprocess.run([sys.executable, str(script), "init"], capture_output=True,
+                                  text=True, env=self.env)
+        self.assertEqual(response.returncode, 0, response.stderr)
+        self.assertEqual(json.loads(response.stdout)["data_file"], str(custom / "progress.json"))
+        self.assertEqual({p.name: p.read_bytes() for p in custom.iterdir() if p.is_file()}, before)
+        home = Path(self.temp.name) / "new-home"
+        home.mkdir()
+        shutil.copy2(SCRIPT.parents[1] / "settings.json", config)
+        response = subprocess.run([sys.executable, str(script), "show"], capture_output=True,
+                                  text=True, env={**self.env, "HOME": str(home)})
+        self.assertEqual(response.returncode, 0, response.stderr)
+        self.assertEqual(json.loads(response.stdout)["data_file"],
+                         str(home / ".local/share/travel-english-coach/progress.json"))
+        self.assertEqual(json.loads(response.stdout)["status"], "not_initialized")
+        self.assertFalse((home / ".local").exists())
+        self.assertEqual({p.name: p.read_bytes() for p in custom.iterdir() if p.is_file()}, before)
+
+    def test_large_archive_queries_are_read_only_and_checkpoint_writes_are_bounded(self):
+        state = self.read()
+        for n in range(2000):
+            entry = {**session(str(n)), "minutes": None, "summary": "Synthetic fixture",
+                     "next_step": "", "updated_at": state["updated_at"]}
+            state["sessions"][str(n)] = entry
+            state["review_items"][str(n)] = {**item(str(n), "2026-10-16"),
+                                           "attempts": 0, "last_result": "未评估"}
+        self.put(state)
+        before = (self.directory / "progress.json").read_bytes()
+        view = self.call("show", "--today", "2026-10-16", "--limit", 3)
+        self.assertEqual(view["due_review_count"], 2000)
+        self.assertEqual(len(view["due_review_items"]), 3)
+        self.assertLess(len(json.dumps(view)), 8000)
+        self.call("reviews", "--limit", 3)
+        self.assertEqual((self.directory / "progress.json").read_bytes(), before)
+        patch = self.patch_file({"session": {"id": "0", "summary": "Updated synthetic checkpoint"}})
+        with mock.patch.object(sys, "argv", self.argv("save", "--file", patch,
+                                                      "--expected-revision", state["revision"])[1:]), \
+             mock.patch.object(progress, "atomic_json", wraps=progress.atomic_json) as writes:
+            saved = progress.main()
+        self.assertEqual(saved["session_count"], 2000)
+        self.assertEqual(saved["review_item_count"], 2000)
+        self.assertEqual([call.args[0].name for call in writes.call_args_list],
+                         ["progress.previous.json", "progress.json"])
+        self.assertEqual(json.loads((self.directory / "progress.previous.json").read_text()), state)
+        self.assertEqual(self.read()["sessions"]["1999"], state["sessions"]["1999"])
+        self.assertEqual(self.read()["review_items"], state["review_items"])
 
     def test_init_is_idempotent_and_does_not_reset_progress(self):
         self.save({"profile": {"daily_minutes": 30}, "session": session()})

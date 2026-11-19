@@ -50,6 +50,24 @@ class BehaviorEvaluation(unittest.TestCase):
         output["trace"].append({"argv": ["lark-cli", "im", "+send"]})
         self.assertGreaterEqual(len(score(case, output)["errors"]), 2)
 
+    def test_small_brief_rejects_extra_workflow_deliverables_and_output(self):
+        case = next(c for c in self.cases if c["id"] == "bounded-local-brief")
+        good = self.output(case)
+        good["artifacts"] = ["background.md"]
+        self.assertTrue(score(case, good)["passed"])
+        for bad in ("tracking", "diagram", "long_report", "extra_queries"):
+            with self.subTest(bad=bad):
+                output = copy.deepcopy(good)
+                if bad == "tracking":
+                    output["trace"].append({"argv": ["python3", "/skills/run_state.py", "prepare"]})
+                elif bad == "diagram":
+                    output["artifacts"].append("relations.mmd")
+                elif bad == "long_report":
+                    output["report"] += "无关背景" * 200
+                else:
+                    output["trace"] *= 3
+                self.assertFalse(score(case, output)["passed"])
+
     def test_export_hides_expectations_from_future_executor(self):
         result = subprocess.run([sys.executable, str(CASES.parents[2] / "scripts" / "evaluate_behavior.py"),
                                  "export", "--case", "chat-only"], capture_output=True, text=True)
