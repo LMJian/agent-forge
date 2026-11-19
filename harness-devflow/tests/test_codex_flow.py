@@ -16,7 +16,7 @@ from harness.reuse import reuse
 from harness.storage import atomic_json, read_json
 from harness.verification import verify
 import test_host_execution as support
-from test_workflow import RepoCase
+from test_workflow import RepoCase, engineering_assessment
 
 
 class CodexFlowTests(RepoCase):
@@ -52,7 +52,9 @@ class CodexFlowTests(RepoCase):
 
     def body(self, name, **extra):
         path = self.root / f".harness/runs/codex/artifacts/{name}.json"
-        atomic_json(path, {"status": "pass", "summary": name, "artifacts": [str(self.artifact)], "findings": [], **extra})
+        body = {"status": "pass", "summary": name, "artifacts": [str(self.artifact)], "findings": [], **extra}
+        body.setdefault("details", {}).setdefault("engineering", engineering_assessment())
+        atomic_json(path, body)
         return path
 
     def intake(self):

@@ -154,9 +154,12 @@ def resolve_workflow(config: dict, overrides: dict | None = None) -> dict:
 
 def validate_command(spec: Any, label: str, *, adapter: bool = False) -> None:
     require(isinstance(spec, dict), f"{label} must be an object")
-    require(set(spec) <= ({"argv", "timeout_seconds", "effect"} if adapter else {"argv", "timeout_seconds", "reuse", "proof", "tier"}),
+    require(set(spec) <= ({"argv", "timeout_seconds", "effect"} if adapter else {"argv", "timeout_seconds", "reuse", "proof", "tier", "budget"}),
             f"Unknown command option in {label}")
     if not adapter:
+        if "budget" in spec:
+            from .engineering import validate_budget
+            validate_budget(spec["budget"])
         require(spec.get("proof", "component") in {"static", "build", "component", "artifact", "runtime"},
                 f"Invalid proof boundary in {label}")
         require(spec.get("tier", "regression") in {"critical", "regression", "packaging"},

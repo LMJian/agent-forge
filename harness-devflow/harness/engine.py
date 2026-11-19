@@ -153,7 +153,7 @@ class Workflow:
                 if stage in CODE_BOUND:
                     code = code or vcs.fingerprint(self.root)
                     require(item.get("fingerprint") == code, "Code changed after verification")
-                if stage == "review":
+                if stage in {"review", "integration"}:
                     from .quality import enabled, closure
                     if enabled(state):
                         closure(self, state)
@@ -296,6 +296,8 @@ class Workflow:
         if stage in {"design_audit", "review"}:
             require("findings" in report, "An explicit findings array is required, including when empty")
         if stage == "intake":
+            from .engineering import validate_assessment
+            validate_assessment(state, details)
             acceptance = strings(details.get("acceptance"), "intake.details.acceptance")
             module_waves(details.get("modules"))
             covered = set()
@@ -354,6 +356,15 @@ class Workflow:
                 artifacts.extend(e["path"] for e in module["evidence"])
         elif stage in {"review", "integration"}:
             self.check_receipts(state, report, stage)
+            if stage == "review":
+                from .engineering import budget_digest, validate_assessment
+                planned = (self.report_for(state, "intake")["details"].get("engineering")
+                           if state["stages"]["intake"]["status"] == "done" else None)
+                validate_assessment(state, details if "engineering" in details or planned is None
+                                    else {"engineering": planned}, planned)
+                if planned:
+                    require(budget_digest(state, planned) == state["stages"]["intake"].get("engineering_budget_hash"),
+                            "Accepted engineering budgets changed; reopen intake with the scope decision")
             from .quality import enabled, closure
             if enabled(state):
                 artifacts = [*artifacts, *closure(self, state)]
@@ -397,6 +408,9 @@ class Workflow:
             item.update(report=inside(self.root, source).relative_to(self.root).as_posix(),
                         evidence=evidence, fingerprint=vcs.fingerprint(self.root), head=vcs.head(self.root),
                         status="waiting_human" if request_approval else "done")
+            if stage == "intake":
+                from .engineering import budget_digest
+                item["engineering_budget_hash"] = budget_digest(state, report["details"]["engineering"])
             if request_approval:
                 item["approval_digest"] = digest({"config": state["config_hash"],
                                                   "evidence": evidence,

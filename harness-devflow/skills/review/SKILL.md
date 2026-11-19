@@ -7,6 +7,10 @@ description: "Review changes for an active Harness task or an explicitly request
 
 Read [the runtime contract](../flow/references/runtime.md) and [review criteria](../../references/review-criteria.md). Run `next` for the selected `review` stage on the owning branch containing all module merges.
 
+Reassess [engineering budgets](../../references/engineering-budgets.md) against the actual diff.
+Reuse intake's assessment when unchanged; supply `details.engineering` for corrections or
+`start-review` without intake. Do not drop accepted checks or treat functional success as cost evidence.
+
 If the user asks to review existing changes and no task exists, configure actual project checks
 and use `start-review --goal ... --base <explicit-baseline> --acceptance ...`.
 Read the returned `review_context` instead of requiring absent intake or plan reports.

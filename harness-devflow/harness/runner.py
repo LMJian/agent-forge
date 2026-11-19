@@ -12,7 +12,7 @@ from . import executors
 from .hosts import module_path, resolve
 from .engine import Workflow, current
 from .model import HarnessError, digest, nonempty, now, require
-from .storage import atomic_json, file_lock, inside, snapshots
+from .storage import atomic_json, file_lock, inside, snapshots, verify_snapshots
 
 
 MAX_RESPONSE_BYTES = 1024 * 1024
@@ -100,6 +100,7 @@ def run(workflow: Workflow, kind: str, name: str, *, authorization: str | None =
                         "argv": spec["argv"]})
         directory = inside(workflow.root, workflow.directory / "commands" / run_id)
         directory.mkdir(parents=True)
+        budget_inputs = snapshots(cwd, spec["budget"]["inputs"]) if kind == "check" and "budget" in spec else []
         receipt = {"id": run_id, "kind": kind, "name": name, "stage": stage, "epoch": epoch,
                    "module": module, "status": "running", "fingerprint": code,
                    "provider": execution["command"], "host": execution["host"],
@@ -111,6 +112,8 @@ def run(workflow: Workflow, kind: str, name: str, *, authorization: str | None =
             receipt["capability_id"] = capability_use["id"]
         if reusable:
             receipt["reuse_inputs"] = reusable
+        if "budget" in spec and kind == "check":
+            receipt["budget_inputs"] = budget_inputs
         state["runs"].append(receipt)
         request = {"schema_version": 1, "task": workflow.task, "goal": state["goal"],
                    "stage": stage, "repository": str(workflow.root), "branch": state["branch"],
@@ -126,6 +129,8 @@ def run(workflow: Workflow, kind: str, name: str, *, authorization: str | None =
     environment.update(HARNESS_REQUEST=str(directory / "request.json"),
                        HARNESS_TASK=workflow.task, HARNESS_STAGE=stage,
                        HARNESS_IDEMPOTENCY_KEY=token)
+    if kind == "check" and "budget" in spec:
+        environment["HARNESS_METRICS_FILE"] = str(directory / "metrics.json")
     result = {"exit_code": None, "timed_out": False, "response": None, "error": None, "outcome": "unknown"}
     began = time.monotonic()
     replacements = {"{plugin_root}": str(Path(__file__).resolve().parent.parent),
@@ -154,6 +159,12 @@ def run(workflow: Workflow, kind: str, name: str, *, authorization: str | None =
             result["error"] = "Command timed out; inspect external effects before retrying"
         if result["exit_code"] != 0 and not result["error"]:
             result["error"] = f"Command exited with code {result['exit_code']}"
+        if kind == "check" and "budget" in spec and result["exit_code"] == 0 and not result["error"]:
+            from .engineering import evaluate
+            result["budget"] = evaluate(spec["budget"], directory / "metrics.json")
+            if result["budget"]["status"] != "passed":
+                failed = [m["metric"] for m in result["budget"]["metrics"] if m["status"] == "failed"]
+                result["error"] = "Engineering budget exceeded: " + ", ".join(failed)
         if kind == "adapter" and result["exit_code"] == 0:
             require((directory / "stdout.log").stat().st_size <= MAX_RESPONSE_BYTES,
                     "Adapter response exceeds 1 MiB; put diagnostics on stderr")
@@ -186,6 +197,11 @@ def run(workflow: Workflow, kind: str, name: str, *, authorization: str | None =
                 require(reusable == reuse_inputs(workflow, latest, spec, cwd),
                         "Reusable check context changed during execution")
             except (OSError, HarnessError) as error:
+                receipt.update(status="failed", error=str(error))
+        if budget_inputs:
+            try:
+                verify_snapshots(cwd, budget_inputs)
+            except HarnessError as error:
                 receipt.update(status="failed", error=str(error))
         if latest["config_hash"] != digest(workflow.config):
             receipt.update(status="failed", error="Configuration changed during command execution")

@@ -55,6 +55,10 @@ def packet(workflow, state: dict) -> dict:
     base = Path(__file__).resolve().parent.parent
     result["skill"] = str(base / "skills" / skill_for(stage) / "SKILL.md")
     result["checks"] = state["config"]["stage_checks"].get(stage, [])
+    if stage in {"intake", "review"}:
+        from .engineering import AREAS
+        result["engineering"] = {"areas": list(AREAS),
+                                 "instruction": "Assess details.engineering: reason and final-review checks per area; empty checks need an inapplicability reason. Applicable resource areas need measured budgets. Review can reuse an unchanged intake assessment."}
     if stage == "review" and state["workflow"]["target"] != "local":
         result["review_preparation"] = {
             "commit_before_verification": True, "dirty": not vcs.clean(workflow.root),

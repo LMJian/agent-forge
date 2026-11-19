@@ -7,7 +7,7 @@ from harness import git as vcs
 from harness.engine import Workflow
 from harness.model import HarnessError
 from harness.storage import atomic_json, read_json
-from test_workflow import RepoCase
+from test_workflow import RepoCase, engineering_assessment
 
 
 class RepositoryGroupTests(RepoCase):
@@ -50,6 +50,7 @@ class RepositoryGroupTests(RepoCase):
             artifact.write_text("Checked the value contract in both fixtures.\n")
             report = artifact.with_suffix(".json")
             atomic_json(report, {"schema_version": 2, "stage": stage, "status": "pass", "summary": "Checked contract",
+                                 "details": {"engineering": engineering_assessment()},
                                  "findings": [], "artifacts": [str(artifact)], "checks": [receipt["id"]]})
             flow.complete(stage, str(report))
         return receipt

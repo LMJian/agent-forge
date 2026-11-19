@@ -92,6 +92,9 @@ def reuse(workflow, name: str, source_id: str, module=None) -> dict:
 def validate_receipt(workflow, state, receipt, *, inputs_cache=None):
     """Apply the same freshness rules at checkpoints, completion and delivery."""
     spec = state["config"]["checks"][receipt["name"]]
+    if "budget" in spec:
+        require(receipt.get("budget", {}).get("status") == "passed", "Check lacks successful engineering budget evidence")
+        verify_snapshots(Path(receipt["cwd"]), receipt["budget_inputs"])
     cross_stage = bool(receipt.get("reuse_inputs")) and spec.get("reuse", {}).get("across_stages", False)
     require(not any(r["kind"] == "check" and r["name"] == receipt["name"] and
                     r["cwd"] == receipt["cwd"] and r["status"] == "failed" and

@@ -21,6 +21,13 @@ from harness.model import HarnessError, module_waves, validate_config
 from harness.storage import atomic_json, read_json
 
 
+def engineering_assessment():
+    """This fixture changes a pure value API; only its retained contract needs a check."""
+    from harness.engineering import AREAS
+    return {area: {"reason": "Pure local value API; no storage, retries, growing data or background work",
+                   "checks": ["unit"] if area == "minimal_change" else []} for area in AREAS}
+
+
 class RepoCase(unittest.TestCase):
     def setUp(self):
         env_patch = patch.dict(os.environ, {"GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1",
@@ -75,6 +82,8 @@ class RepoCase(unittest.TestCase):
         artifact = self.write(prefix + ".md", f"# {stage}\nEvidence for the reusable capability.\n")
         data = {"schema_version": 2, "stage": stage, "status": "pass", "summary": f"Completed {stage}",
                 "artifacts": [str(artifact)], "findings": [], **extra}
+        if stage in {"intake", "review"}:
+            data.setdefault("details", {}).setdefault("engineering", engineering_assessment())
         path = self.root / (prefix + "-report.json")
         atomic_json(path, data)
         return path

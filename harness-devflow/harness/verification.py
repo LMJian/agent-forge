@@ -41,6 +41,7 @@ def plan(workflow, module=None):
         previous = next((r for r in reversed(state["runs"]) if r["kind"] == "check" and r["name"] == name and not r.get("reused_from")), None)
         source, reason = candidate(workflow, state, name, module)
         checks.append({"name": name, "tier": spec.get("tier", "regression"), "proof": spec.get("proof", "component"),
+                       "budget": spec.get("budget"),
                        "cases": [c["id"] for c in definitions if c.get("check") == name],
                        "reuse_from": source["id"] if source else None, "reuse_reason": reason,
                        "estimated_seconds": 0 if source else previous.get("duration_seconds") if previous else None})
@@ -71,6 +72,7 @@ def verify(workflow, module=None, fresh=False):
         if receipt is None:
             receipt = runner.run(workflow, "check", name, module=module)
         results.append({"name": name, "id": receipt["id"], "status": receipt["status"],
+                        "error": receipt.get("error"),
                         "reused_from": receipt.get("reused_from")})
         if module is None and receipt["status"] in {"passed", "failed"}:
             from .quality import cases, record_bodies

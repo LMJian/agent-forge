@@ -7,6 +7,10 @@ description: "Define acceptance and implementation tasks for the intake stage of
 
 Read [the runtime contract](../flow/references/runtime.md). Run `next` for the selected `intake` stage.
 
+Include `details.engineering` using [engineering budgets](../../references/engineering-budgets.md).
+Assess the six areas against the actual change; pin applicable workload/bounds and checks
+before coding. Small edits can explain inapplicability and retain one contract regression.
+
 For `profile=codex`, follow [the Codex contract](../../references/codex-workflow.md).
 Produce one decision packet with architecture/interfaces, feasibility probes, test ownership and
 inline tasks. Include the actual user-entry-to-terminal-outcome journey and evidence for each step;

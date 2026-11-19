@@ -3,6 +3,10 @@
 Apply criteria only when the changed behavior makes them relevant. A recommendation should
 identify the trigger, the resulting failure and a concrete correction or verification gap.
 
+Use [engineering budgets](engineering-budgets.md) for explicit applicability, workload,
+measured cost/retry/work/data-size bounds and retained-behavior regression. Inspect total
+chain cost and existing mechanisms before adding state, retries, dedup or shared-service changes.
+
 | Area | Questions that affect delivery |
 | --- | --- |
 | Requirements | Does each acceptance criterion map to a design decision, implementation and observable test? |

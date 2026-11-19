@@ -99,6 +99,10 @@ Skills 按需加载。两个专业 Skills 及其全部资源随插件分发，�
 
 ## 验证与参考
 
+intake/review 通过 `details.engineering` 说明六类工程风险及适用检查；相关命令可声明
+`budget`，输出指标后由核心校验工作量、成本和数据大小。复用现有阶段，不新增业务 SDK。
+格式及反例要求见 [工程预算与最小改动](references/engineering-budgets.md)。
+
 ```bash
 python3 -m unittest discover -s tests -v
 python3 scripts/validate_distribution.py

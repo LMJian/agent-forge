@@ -15,6 +15,10 @@ Backend auto selects bundled [server-tech-design](../server-tech-design/SKILL.md
 
 Design modules in dependency order. Cover interface contracts, persistence and invariants, data lifecycle, main/error paths, idempotency and concurrency when relevant, compatibility, alternatives and their tradeoffs. Tie decisions to acceptance IDs. Document rollout, observability and rollback proportionally to the actual change. Include capacity assessment when new fanout or downstream load makes it material.
 
+Reuse intake's [engineering budgets](../../references/engineering-budgets.md): quantify relevant
+chain cost, retry ownership, bounded maintenance/data size and preserved behavior; do not
+add duplicate mechanisms or compatibility without an actual requirement.
+
 Use a cohesive shared design with module sections, or separate module documents when that helps review. `details.designs` maps every module ID to a listed artifact; several modules may point to the same document. Include interface changes when applicable. Preserve the professional design's structure instead of wrapping it in another duplicate technical proposal. Resolve material decisions while preserving prior approvals.
 
 Complete `design` and follow status. A design correction uses `reopen design --reason ...` to invalidate selected downstream work. Worktree creation and implementation belong to implement; detailed task planning belongs to plan.

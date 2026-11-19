@@ -6,6 +6,14 @@
   ],
   "findings": [],
   "details": {
+    "engineering": {
+      "io": {"reason": "Pure local computation, no persistence or downstream calls", "checks": []},
+      "retry": {"reason": "No retry or asynchronous delivery changes", "checks": []},
+      "performance": {"reason": "Constant work on existing bounded inputs", "checks": []},
+      "loops": {"reason": "No iteration, scheduling or background work", "checks": []},
+      "data_size": {"reason": "No growing persisted or in-memory collections", "checks": []},
+      "minimal_change": {"reason": "Preserve the existing public input/output and error contract", "checks": ["product-smoke"]}
+    },
     "acceptance": [
       "AC-1"
     ],

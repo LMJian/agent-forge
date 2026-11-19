@@ -38,6 +38,7 @@ Use [the packet example](../docs/codex-packet.example.json). Keep artifacts shor
 existing evidence instead of copying it into every stage. Required `details`:
 
 - Existing `acceptance`, `modules`, `approach`, `verification` fields.
+- `engineering`: six scoped assessments and measured checks per [engineering budgets](engineering-budgets.md).
 - `tasks`: module-to-task map used by `plan`, including acceptance IDs and real verification.
 - `journey`: user `entry`, `terminal_outcome`, and observable `steps` with `id`, `outcome`,
   `acceptance`, and `proof=artifact|runtime`. Include every required handoff and final side effect,
