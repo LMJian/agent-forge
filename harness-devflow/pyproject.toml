@@ -1,6 +1,6 @@
 [project]
 name = "harness-devflow"
-version = "1.0.4+codex.20261119220839"
+version = "1.0.5+codex.20261119223840"
 description = "Codex workflow with feasibility probes, acceptance evidence and automated verification"
 requires-python = ">=3.10"
 dependencies = []

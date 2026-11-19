@@ -37,6 +37,10 @@ Before implementation, write a compact `report.md` containing:
 - A change table with concrete evidence and validation behavior.
 - Only the gaps that remain relevant, stating whether they block this phase or belong to later verification.
 
+The baseline must support the actual reuse/change decision, not just list components. Include relevant
+[contract, lifecycle and cost findings](search-playbook.md#trace-the-affected-path) beside their evidence;
+do not add six empty sections or invent costs when a bounded factual answer is sufficient.
+
 For a design handoff, make affected responsibilities explicit. Distinguish new code and changed
 contracts from reused behavior, configuration/version coordination and retained or removed behavior.
 Do not count a dependency's existing in-progress implementation as work to build again. Preserve exact
@@ -128,7 +132,14 @@ remain conservative. Source input freshness does not refresh the runtime observa
 
 When evaluating readiness, name the phase: design, implementation, integration or release. Apply `READY`, `READY_WITH_GAPS` or `BLOCKED` to that phase only. List later phases as pending when they were not evaluated. For a factual investigation without a next-phase decision, describe what is established and uncertain instead of inventing a phase or blocking on an unchosen future design.
 
-For each gap, explain the missing fact, the action it affects, why existing evidence cannot settle it, and when an answer is needed. Separate unresolved business decisions from technical lookup/integration work and tunable proposals; use an owner only when known. Latest accepted user decisions remain settled. Only call a gap blocking when the next action depends on the answer. Distinguish a potentially breaking unknown contract from a known contract whose live environment has not been tested.
+For each material gap, state the missing fact, dependent action, next verification and latest milestone
+that needs the answer. Unknown required payload/auth/side-effect semantics block code that relies on
+them; missing live connectivity can remain an integration check once the local contract is known.
+Do not let a broad READY_WITH_GAPS label erase those boundaries as work moves to the next phase.
+Separate unresolved business decisions, technical lookup/integration work and tunable proposals;
+use an owner only when known. Accepted user decisions stay settled. A factual answer needs no
+invented phase or unrelated release blocker. Carry only consequential unresolved gaps into the next
+handoff and resolve them with evidence rather than silently dropping them.
 
 ## Keep the evidence timeline intact
 

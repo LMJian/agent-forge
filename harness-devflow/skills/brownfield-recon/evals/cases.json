@@ -42,6 +42,97 @@
         "区分业务限额、技术接入核实与可调参数，写明影响、下一步及阶段；设计可有边界地继续，不冒称实现、集成或发布就绪。",
         "只刷新相关结论，不重复请求已有源码、整仓采集或执行外部操作。"
       ]
+    },
+    {
+      "id": "payload-consumer-boundary",
+      "request": "只根据这些本地材料调查接入契约和可复用校验，给出证据与结论。目标是沿用当前支持的数据，不修改代码或接口，也不查外部系统。",
+      "files": {
+        "consumer.py": "import json\n\ndef decode(request):\n    if request['occurred_ms'] <= 0:\n        raise ValueError('invalid occurred_ms')\n    value = json.loads(request['data_json'])\n    items, deleted = value.get('items', []), value.get('deleted_ids', [])\n    if not isinstance(items, list) or not isinstance(deleted, list):\n        raise ValueError('invalid batch')\n    for item in items:\n        if item['end_ms'] < item['start_ms']:\n            raise ValueError('invalid sample time')\n    return items, deleted\n",
+        "request.json": "{\"occurred_ms\": 2000, \"data_json\": \"{\\\"items\\\": [{\\\"id\\\": \\\"s1\\\", \\\"start_ms\\\": 1000, \\\"end_ms\\\": 1800, \\\"value\\\": 3}], \\\"deleted_ids\\\": [\\\"s0\\\"]}\"}",
+        "baseline.md": "已发现 decode 函数；建议新接口必须要求 occurred_ms 等于样本 end_ms，并改为单个 value。\n"
+      },
+      "criteria": [
+        "追踪外层 occurred_ms、JSON 字符串 data_json 和内部 items/deleted_ids，不能只报符号存在。",
+        "当前校验只要求上报时间为正、样本结束不早于开始；给定两个时间不相等也合法。",
+        "支持批量和仅删除记录；不凭一个成功例子推断其他单位、去重或任意未知类型也被支持。",
+        "明确保留现有契约，拒绝没有来源的相等校验和改为单值建议；不修改原代码或凭据。"
+      ]
+    },
+    {
+      "id": "configured-entry-and-mapping",
+      "request": "调研当前关闭功能时客户端为什么仍可能返回登录错误，并确认上游已有的元数据映射是否能复用。只读所给代码和配置，不申请权限、不新增鉴权方案。",
+      "files": {
+        "entry.py": "def handle(path, session_user, config):\n    user = session_user if path in config['parse_session_paths'] else None\n    if not user:\n        return 'login invalid'\n    if not config['enabled']:\n        return []\n    return ['job']\n\ndef forward(meta, mapping):\n    return {target: meta[source] for source, target in mapping.items() if source in meta}\n",
+        "config.json": "{\"enabled\": false, \"parse_session_paths\": [], \"mapping\": {\"common.user_id\": \"user_id\", \"common.device_id\": \"device_id\"}}",
+        "notes.md": "HTTP 路由已注册，功能关闭，所以应该不会检查登录。设备 ID 已能透传，可认为设备归属已经验证。\n"
+      },
+      "criteria": [
+        "沿着路由后的配置化 Session 解析和 Handler 顺序定位问题：路径未配置导致 user 缺失，且登录检查先于 enabled。",
+        "区别路由注册、配置存在、实例生效和实际请求；不能用关闭功能推断不会影响登录检查。",
+        "指出 forward 已有配置映射能力，说明可复用的输入/输出；不能凭透传设备 ID 宣称验证了设备归属。",
+        "保留鉴权来源和生效状态的未知边界，不新增 Header 特化、RPC 或 ZTI/OAuth 方案。"
+      ]
+    },
+    {
+      "id": "mechanism-and-work-budget",
+      "request": "调查已有去重、重试和扫描机制，比较新增三处状态的必要性和成本。只给有依据的基线与边界，不改代码、不做无关压测。",
+      "files": {
+        "pipeline.py": "class Store:\n    def __init__(self): self.writes = 0; self.bytes = 0\n    def put(self, key, value): self.writes += 1; self.bytes += len(value)\n\nclass Runner:\n    def __init__(self): self.seen = set(); self.executions = 0\n    def run(self, delivery_id):\n        if delivery_id not in self.seen:\n            self.seen.add(delivery_id); self.executions += 1\n\ndef deliver(event_id, subscriptions, store, runner, extra_state=False):\n    store.put('receipt:'+event_id, b'received')\n    if extra_state:\n        for phase in ('claim', 'done'): store.put('source:'+phase, b'1')\n    for sub in subscriptions:\n        if extra_state:\n            for stage in ('published', 'attempt'):\n                for phase in ('claim', 'done'): store.put(sub+stage+phase, b'1')\n        runner.run(event_id+':'+sub)\n\ndef send_with_retries(send):\n    for outer in range(3):\n        for sdk in range(3):\n            try: return send()\n            except TimeoutError: pass\n    raise TimeoutError('exhausted')\n\ndef scan(owners, replicas):\n    return sum(1 for replica in range(replicas) for owner in owners)\n",
+        "proposal.md": "每层重试 3 次，所以最多 3 次请求。分页以后不存在大 key 和扫描放大。新增三处状态只会提高可靠性。\n"
+      },
+      "criteria": [
+        "识别接收回执与执行去重的不同边界；Runner.seen 是进程内 set，不能声称已具备跨重启持久幂等。",
+        "按匹配 F 个订阅计算新增状态额外 2+4F 次写入，并区分写次数、字节和静态测试模型，不冒充线上测量。",
+        "嵌套失败路径最多调用 send 9 次，不是 3 次；扫描工作量为 owner 数乘副本数，分页不能证明总扫描或根索引有界。",
+        "先判断每处状态覆盖的独特故障与保留条件，不直接新增更多状态，也不因稳定 ID 就建议删掉全部去重。"
+      ]
+    },
+    {
+      "id": "task-and-shared-resource-lifecycle",
+      "request": "只读调查为什么任务列表为空但共享监听资源仍存在，区分预期共享和实际清理失败，给出最小待验证范围。不要删除数据或新增定时任务。",
+      "files": {
+        "lifecycle.py": "def cancel_task(task_id, tasks, subscriptions, gateway):\n    sub = tasks.pop(task_id)\n    gateway(sub)  # caller ignores the unsubscribe result\n    return {'code': 0}\n\ndef active_watches(subscriptions):\n    return {value['watch'] for value in subscriptions.values() if value['active']}\n",
+        "state.json": "{\"tasks\": {\"t1\": \"s1\", \"t2\": \"s2\"}, \"subscriptions\": {\"s1\": {\"watch\": \"w1\", \"active\": true}, \"s2\": {\"watch\": \"w1\", \"active\": true}}}",
+        "gateway.json": "{\"unsubscribe_s1\": {\"status\": 204, \"active_after\": false}, \"unsubscribe_s2\": {\"status\": 503, \"active_after\": true}}",
+        "notes.md": "任务取消接口 code=0 就表示客户端监听全部清理。一个 watch_key 对应一个任务。\n"
+      },
+      "criteria": [
+        "建立 t1→s1→w1 与 t2→s2→w1 的多对一关系，取消 s1 后仍有 s2 时保留 w1 符合共享语义。",
+        "s2 退订失败且调用方忽略结果，task 仍被删除并返回成功；任务为空不能证明资源已清理。",
+        "明确逻辑删除、下游退订结果和有效监听集合的边界；不能将所有残留一概归因到共享或旧数据。",
+        "只提出错误传播/清理状态等需设计验证的最小范围，不直接修数据、扩成周期巡检或引入迁移开关。"
+      ]
+    },
+    {
+      "id": "async-runtime-correlation",
+      "request": "用所给日志快照判断配置 Push 到了哪一步，解释为什么同一个 LogID 查不到 Gateway 日志不能直接说明没发送。只分析本地证据，不查询线上。",
+      "files": {
+        "logs.json": "[{\"log_id\": \"L-main\", \"service\": \"svc.worker\", \"requested_env\": \"ppe-a\", \"runtime_env\": \"online\", \"op\": \"callback\", \"device\": \"D1\", \"subscription\": \"s1\"}, {\"log_id\": \"L-create\", \"service\": \"svc.gateway\", \"runtime_env\": \"ppe-a\", \"op\": \"subscribe\", \"device\": \"D1\", \"subscription\": \"s1\", \"revision\": 7, \"time\": \"10:00:00\"}, {\"log_id\": \"L-send\", \"service\": \"svc.gateway\", \"runtime_env\": \"ppe-a\", \"op\": \"SendCMD\", \"device\": \"D1\", \"subscription\": \"s1\", \"revision\": 7, \"result\": \"accepted\", \"time\": \"10:00:01\"}, {\"log_id\": \"L-pull\", \"service\": \"svc.gateway\", \"runtime_env\": \"ppe-a\", \"op\": \"pull\", \"device\": \"D1\", \"revision\": 7, \"code\": 0, \"time\": \"10:00:07\"}]",
+        "query.json": "{\"filter\": {\"log_id\": \"L-main\", \"service\": \"svc.gateway\"}, \"rows\": 0, \"coverage\": \"partial\", \"timeout\": true}",
+        "notes.md": "请求带 ppe-a，所以整条链路均在 ppe-a。Gateway 0 条日志，说明未发送 Push。后来 Pull 成功，说明手机应用配置和 Agent 消息均已成功。\n"
+      },
+      "criteria": [
+        "请求环境与实际运行环境分开：L-main 在 online，其他记录在 ppe-a，不拼成已验证的单一泳道链路。",
+        "按设备、订阅、revision 和时间关联独立 LogID：SendCMD 已受理且存在随后成功 Pull；异步日志不必继承 L-main。",
+        "0 条结果伴随 timeout/partial，不能证明 Gateway 未收到或未发送。",
+        "不能由 accepted 或 Pull 推断手机已应用、Push 一定促成了 Pull、Agent 消息已送达；保留这些未观测结果。"
+      ]
+    },
+    {
+      "id": "phase-specific-gap-handoff",
+      "request": "根据这些材料判断哪些事实足够继续、哪些缺口要先解决。用户已确定不做历史兼容、不加开关；只写一份简短交接，不修改原基线、不重新询问已决定事项。",
+      "files": {
+        "requirements.md": "服务端需按统一单位做阈值判断；沿用已有接收链路。尚未上线，不做旧实现兼容，不新增配置开关。\n",
+        "schema.json": "{\"value\": \"number\", \"unit\": \"not specified\"}",
+        "environment.json": "{\"local_receiver_contract\": \"known\", \"local_tests\": \"passed\", \"broker_credentials\": \"unavailable\", \"deployed_version\": \"unknown\"}",
+        "baseline/report.md": "阶段：设计 READY_WITH_GAPS。字段 value 的单位未确定，真实 MQ 连接待验证。建议重写接收链路并加兼容开关。\n"
+      },
+      "criteria": [
+        "保留原基线历史，交接标明当前采用的用户约束，拒绝重新建接收链路或添加兼容开关的无依据建议。",
+        "value 单位影响阈值算法，必须在依赖它的实现前确认；不能用笼统 READY_WITH_GAPS 当作可直接完成实现。",
+        "已有接收契约足以复用，缺 broker 凭据不等于功能不存在，也不阻止与其无关的本地工作。",
+        "真实 MQ 连通和部署状态留在集成/上线前验证，说明下一验证与依赖动作；不编造负责人或统一阻塞所有阶段。"
+      ]
     }
   ]
 }

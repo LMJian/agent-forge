@@ -38,7 +38,11 @@ Start with the user's specified knowledge location or document, including custom
 
 For a follow-up, check the earlier evidence's scope and revision against the current question. Refresh only the affected claims using relevant file/contract changes, working-tree edits or changed runtime state. A different HEAD alone does not invalidate the whole report. If no material finding changes, answer directly with the applicable evidence; otherwise append a dated discovery or create a separate baseline when the scope/version has materially changed. Keep a concise current-conclusion pointer in the entry report when the discovery supersedes an earlier planning conclusion. Preserve the original evidence and identify what changed; appending a contradictory conclusion at the end is not a usable handoff. Do not regenerate an inventory or report merely because a new message arrived.
 
-Trace each affected behavior through its caller/entrypoint, implementation, relevant schema/configuration, and result or failure path. Include persistence, retry, cancellation, routing or capacity where the change touches them. For unchanged dependencies, confirm the interface and reuse constraints; expand only if that reveals an impact. Mark irrelevant layers as not applicable rather than creating missing-contract questions.
+Trace each affected behavior through its caller/entrypoint, configuration-dependent processing,
+implementation and result/failure path. Establish the actual reuse conditions and relevant lifecycle,
+cost and async boundaries using [affected-path tracing](references/search-playbook.md#trace-the-affected-path).
+For unchanged dependencies, confirm what the change requires; expand only when that reveals an impact.
+Do not turn irrelevant layers into missing-contract questions or a mandatory audit checklist.
 
 When a protocol or cross-repository dependency will change, compare the consumer's pinned version with the candidate version early. Record the requested additions and existing capabilities the consumer must retain; verify schema/types, mappings and relevant semantics, not only version numbers or the new symbol. Do not assume a newer or feature-named branch contains changes from another branch. See the compact contract comparison in [report-contract.md](references/report-contract.md).
 
@@ -52,7 +56,8 @@ For live or cross-repository conclusions, bind the claim to the relevant source/
 
 When preparing a change, record what will be **retained, replaced or removed**, along with the reason and the behavior to verify. Tests that encode the old design may need replacement; tests of required correctness and safety remain useful.
 
-Read [search-playbook.md](references/search-playbook.md) when deeper tracing, historical reconstruction or a remote contract requires it. Use Git history to answer a concrete question, not as a mandatory tour of every affected file. Generated code can identify a dependency but is not its sole contract owner.
+Use the search playbook for deeper tracing or historical/remote contracts. Git history should answer
+a concrete question, not become a mandatory tour. Generated code is not the sole contract owner.
 
 For a broader inventory, run the bundled collector with an absolute output path; narrow content discovery with `--scope` where possible. Inside an active Harness invocation, use the wrapper's `collect-recon --scope ... --keyword ...` instead: it records the actual command and captures stdout in the run directory. The inventory is supporting evidence; it does not complete recon or determine readiness automatically.
 

@@ -15,11 +15,31 @@ caller -> entrypoint -> validation -> changed branches -> downstream/storage
        <- result/error mapping <- retry, cancellation or partial failure
 ```
 
-Check only the edges relevant to the change: field types and optionality, identity and tenant boundaries, defaults, persistence, retries, ordering, configuration and limits. Inspect both sides of a changed interface where available. Follow the source IDL/schema and regeneration path when generated clients are involved.
+Follow one representative input and its consequential failure path when preparing a change; reuse
+actual retained requests when available. Compare what the producer sends, each transformation and
+what the consumer actually validates/uses. A symbol, SDK method or configuration field is a lead,
+not proof that the required behavior is reachable or reusable. Follow the owning schema and the
+consumer's pinned generated client rather than comparing names alone.
+
+Investigate only the boundaries that can affect the requested decision:
+
+| Boundary | Establish from relevant source/observations |
+| --- | --- |
+| Payload contract | Actual nesting, batches/deletions, units, optional fields, independent timestamps and failure scope. Do not invent validation from a sample or assume one supported variant covers the contract. |
+| Existing mechanisms and ownership | Who owns state and enforces auth, dedup, locking, retry or caching; its IDs, guarantees and limits. Check generic configuration/mapping facilities before proposing shared-entry special cases or duplicate state. |
+| Lifecycle | Map task, subscription and shared resource identities/cardinality; trace create/update/cancel/expiry and failures. Distinguish logical deletion, cleanup requested, downstream accepted and resource actually released. |
+| Whole-path cost | For relevant storage/fanout/maintenance changes, establish calls and bytes, aggregate/root growth, retention and repeated scans. Include SDK/business/broker retries and replicas in the total work; label static estimates versus measurements. Pagination and per-layer limits do not prove a bounded total. |
+| Configured entry | Trace routing, middleware and handler config reads/defaults, auth and feature-gate ordering. Distinguish configured/published/loaded/used and trusted input from ownership verification; an enabled gate or successful route is insufficient. |
+| Async continuation | Identify stable correlation keys at queue/callback/push boundaries and where a LogID changes. Preserve source event versus delivery IDs and version/attempt meaning. Correlate only within matching account/device/environment/time scopes; receiving or accepting is not applying or completing. |
+
+Use concise findings in the existing answer/report, not another mandatory file or a full benchmark.
+Compare candidate responsibility placement only where it affects the change. Name retained behavior,
+the actual gap and the reason any new call/state/adapter is necessary before counting implementation work.
 
 Start with exact symbols/config keys and local aliases using `rg -F`. Use regex after learning naming. Inspect callers and at least the relevant failure path for each critical changed interface. An absent database or IDL in a service that does not use one is not a gap.
 
-For an unchanged dependency, establish what the changed module requires from it. Investigate further only if the interface, lifecycle or failure semantics may be affected.
+Refresh only the affected conclusions when code, configuration, accepted scope or observed deployment
+changes. A correct earlier absence claim must not become an indefinite new-development requirement.
 
 ## History and revision identity
 

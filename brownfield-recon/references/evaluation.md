@@ -23,6 +23,10 @@ unittest suites. They exercise real subprocesses and Git fixtures:
 These tests prove collector/runtime invariants. They do not prove that a model makes all the
 investigation decisions below correctly.
 
+`test_recon_contracts.py` executes synthetic producer/consumer, middleware, retry and lifecycle
+fixtures from the cases below. Its counterexamples validate the case facts and expected distinctions,
+not whether an agent investigated correctly; assess the actual recon output separately.
+
 ## Realistic investigation cases
 
 Use a case with the request, raw artifacts and this Skill. Assess the resulting answer or report.
@@ -33,6 +37,11 @@ Reusable local snapshots are in [evals/cases.json](../evals/cases.json). Materia
 Do not pass `criteria`, intended fixes or this maintenance rubric to the executor. These snapshots
 model source/ref and follow-up decisions; they do not authorize fetching real repositories or querying
 deployment systems. Preserve the original files and the actual result/action record for grading.
+
+The additional contract cases cover actual batches/timestamps, configured middleware and generic
+mapping, whole-path cost, shared-resource cleanup, asynchronous correlation and phase-specific gaps.
+Compare the answer against the provided sources and rejected notes, not keyword counts. For a handoff,
+check that unresolved dependencies survive into the next action without reopening settled user decisions.
 
 | Request and raw evidence | Observable expected behavior |
 | --- | --- |
