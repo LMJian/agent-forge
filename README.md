@@ -6,12 +6,12 @@
 
 | 项目 | 形态 | 主要用途 |
 | --- | --- | --- |
-| [harness-devflow](harness-devflow/README.md) | 完整研发流程插件 | Codex 三段流程、前期可行性验证、自动化验收与可恢复任务。 |
+| [harness-devflow](harness-devflow/README.md) | 完整研发流程插件（Codex、DeepSeek Harness） | 三段流程、前期可行性验证、自动化验收与可恢复任务。 |
 | [brownfield-recon](brownfield-recon/SKILL.md) | 独立 Skill | 调研已有代码、接口契约和失败路径，形成修改前的行为基线与保留／替换／移除判断。 |
 | [server-tech-design](server-tech-design/SKILL.md) | 独立 Skill | 编写、评审和优化服务端技术方案，讲清主流程、关键决策与相关工程约束。 |
 | [lark-context-explore](lark-context-explore/SKILL.md) | 独立 Skill | 从飞书文档、消息、会议等来源收集事项背景，形成带出处、时间线和待确认问题的交接包。 |
 | [travel-english-coach](travel-english-coach/SKILL.md) | 独立 Skill | 面向英语基础薄弱者，通过旅行场景练习表达、澄清和求助，保存学习进度并安排复习。 |
-| [codex-agent-rules](codex-agent-rules/README.md) | 全局 `AGENTS.md` 模板 | 使用 Computer Use 前要求明确授权，并限制大范围读取、重复失败和冗长工具输出。 |
+| [codex-agent-rules](codex-agent-rules/README.md) | 用户级 `AGENTS.md` 模板（Codex、DeepSeek Harness） | 使用 Computer Use 前要求明确授权，并限制大范围读取、重复失败和冗长工具输出。 |
 
 ## 开始使用
 
@@ -25,13 +25,31 @@ git clone https://github.com/LMJian/agent-forge.git
 - **聚焦调研或设计**：单独加载 `brownfield-recon/` 或 `server-tech-design/`，也可以让 Agent 阅读对应的 `SKILL.md`。
 - **收集飞书事项背景**：加载 `lark-context-explore/`，提供项目名、文档链接或群等线索，整理可追溯的背景包。
 - **练习旅行英语**：加载 `travel-english-coach/`，核对固定档案位置后，读取已有进度或开始首个旅行场景。
-- **设置个人执行规则**：将 `codex-agent-rules/AGENTS.md` 安装或合并到 `~/.codex/AGENTS.md`，让新会话默认遵循 Computer Use 授权与低消耗执行约定。
+- **设置个人执行规则**：将 `codex-agent-rules/AGENTS.md` 安装或合并到 `~/.codex/AGENTS.md`（Codex）与 `~/.agents/AGENTS.md`（DeepSeek Harness），让新会话默认遵循 Computer Use 授权与低消耗执行约定。
 
-在 Codex 安装插件后，可用 `$harness-devflow:flow` 启动。插件仅以 Codex 为支持目标；具体配置见 [插件使用说明](harness-devflow/README.md#使用)。
+在 Codex 安装插件后，可用 `$harness-devflow:flow` 启动；DeepSeek Harness 通过 `harness-devflow/dsh/` 打包，入口 Skill 为 `harness-devflow`。具体配置见 [插件使用说明](harness-devflow/README.md#使用)。
 
 首次使用完整流程时，需要在目标仓库的 `.harness/project.json` 中配置该项目实际使用的检查命令；代码托管、接口生成和部署工具按交付需要接入。独立 Skills 按各自说明使用，不需要初始化 Harness 项目。
 
-## harness-devflow：Codex 精简研发流程
+## DeepSeek Harness 接入与本地同步
+
+DeepSeek Harness 默认从 `~/.agents/skills/` 读取用户 Skill，并支持以本地目录方式安装插件 bundle。
+
+- **独立 Skills**：`brownfield-recon`、`lark-context-explore`、`server-tech-design`、`travel-english-coach` 完整复制到 `~/.agents/skills/<name>/`。
+- **完整流程**：在 DeepSeek Harness 中安装 `harness-devflow/dsh/`（Plugins → Add plugin，或插件管理器 `install_bundle`）。宿主模块注册 `harness-devflow/skills/` 下的 16 个 Skill 与入口 Skill `harness-devflow`，运行时仍是 `harness-devflow/scripts/harness.py`，不复制第二份 Skill 或契约文件。
+- **用户级规则**：`codex-agent-rules/AGENTS.md` 同步到 `~/.agents/AGENTS.md`，由 DeepSeek Harness 的用户级指令链在会话开始时读取（`~/.dsh/AGENTS.md` 优先）。
+- **宿主差异**：工具名、审批、恢复、委派和 worktree 的对应关系见 [DeepSeek Harness 宿主映射](harness-devflow/references/dsh-host.md)。
+
+一键同步（备份后覆盖，`--check` 只比较不写）：
+
+```bash
+./scripts/sync-deepseek.sh --check
+./scripts/sync-deepseek.sh
+```
+
+本地目录安装会链接回本仓库；插件和 Skill 正文在重启 DeepSeek Harness 或新开会话后按新版加载。
+
+## harness-devflow：精简研发流程
 
 运行时依赖 **Python 3.10+ 与 Git**，默认 `profile=codex`、`assistance=autonomous`、`target=local`、`isolation=checkout`。
 默认保持当前分支开发；新建／切换开发分支或另开 worktree，必须先有用户明确请求或同意。
@@ -119,7 +137,7 @@ $travel-english-coach 开始今天的练习，先读取我的学习进度。
 - 需要持续推进需求、实现、验证和交付，并保存可恢复状态：使用 `harness-devflow`。
 - 需要从飞书多种来源整理事项背景或交接材料：使用 `lark-context-explore`。
 - 需要持续练习旅行英语并接续学习进度：使用 `travel-english-coach`。
-- 需要为所有 Codex 项目统一 Computer Use 授权和工具输出约束：安装 `codex-agent-rules/AGENTS.md`。
+- 需要统一 Computer Use 授权和工具输出约束：安装 `codex-agent-rules/AGENTS.md`（Codex 与 DeepSeek Harness）。
 
 两个独立 Skills 也有明确的产物交接约定，支持在不同会话中先调研、再设计：
 
@@ -136,6 +154,7 @@ Harness 已在 `harness-devflow/skills/` 内包含两个专业 Skill 及全部�
 在仓库根目录运行：
 
 ```bash
+./scripts/sync-deepseek.sh --check
 python3 harness-devflow/scripts/validate_distribution.py
 (cd harness-devflow && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v)
 (cd lark-context-explore && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v)
@@ -151,12 +170,14 @@ python3 harness-devflow/scripts/validate_distribution.py
 ```text
 .
 ├── README.md
-├── codex-agent-rules/      # Codex 全局规则模板与安装说明
+├── codex-agent-rules/      # 用户级 AGENTS.md 规则模板（Codex / DSH）
 ├── harness-devflow/        # 完整插件：宿主清单、Skills、运行时、文档和测试
+│   └── dsh/                # DeepSeek Harness bundle：注册同一批 Skills
 ├── brownfield-recon/       # 独立调研 Skill 及配套资源
 ├── lark-context-explore/   # 飞书事项背景收集、证据记录和离线校验
 ├── server-tech-design/     # 独立设计 Skill 及配套资源
-└── travel-english-coach/   # 旅行英语教练、独立进度档案工具和回归测试
+├── travel-english-coach/   # 旅行英语教练、独立进度档案工具和回归测试
+└── scripts/                # sync-deepseek.sh：同步 Skill 与规则到本机
 ```
 
 克隆本仓库后，按需使用对应目录：
@@ -165,6 +186,7 @@ python3 harness-devflow/scripts/validate_distribution.py
 - 独立调研或设计：将 `brownfield-recon/` 或 `server-tech-design/` 完整目录放入所用宿主的 Skills 目录，也可在任务中指定其 `SKILL.md` 路径使用。
 - 飞书事项背景收集：将 `lark-context-explore/` 完整目录放入 Skills 目录，并准备已授权的 `lark-cli` 环境。
 - 旅行英语练习：将 `travel-english-coach/` 完整目录放入 Skills 目录；首次使用核对 `settings.json`，更新已有安装时保留其固定档案位置。
-- 全局执行规则：参考 [codex-agent-rules](codex-agent-rules/README.md) 将模板安装或合并到个人 Codex 主目录。
+- 全局执行规则：参考 [codex-agent-rules](codex-agent-rules/README.md) 将模板安装或合并到个人 Codex 主目录，或 DeepSeek Harness 的 `~/.agents/AGENTS.md`。
+- 本地同步：运行 `./scripts/sync-deepseek.sh` 更新 `~/.agents/skills/` 与 `~/.codex/AGENTS.md`，并检查 DeepSeek Harness 插件安装状态。
 
 分享时可以提供本仓库链接或复制所需的完整目录。复制插件时保留 `.codex-plugin/`、`.claude-plugin/` 等隐藏目录；复制 Skill 时保留配套的 `references/`、`scripts/` 等资源。

@@ -1,8 +1,15 @@
-# Codex Agent Rules
+# Agent Rules（Codex / DeepSeek Harness）
 
-一份可复用的 Codex 全局 `AGENTS.md` 模板，约束操作授权、任务范围、验证结论和工具消耗。
+一份可复用的用户级 `AGENTS.md` 模板，约束操作授权、任务范围、验证结论和工具消耗。同一份文本供 Codex 与 DeepSeek Harness 使用。
 
-它不是 Skill。Skill 只在匹配到相关任务时加载，而 `~/.codex/AGENTS.md` 会作为用户级规则在新会话开始时读取，更适合保存必须持续生效的工作约定。
+它不是 Skill。Skill 只在匹配到相关任务时加载，而用户级 `AGENTS.md` 会作为常驻规则在会话开始时读取，更适合保存必须持续生效的工作约定。
+
+两个宿主读取的位置不同，内容相同：
+
+| 宿主 | 用户级规则位置 |
+| --- | --- |
+| Codex | `${CODEX_HOME:-~/.codex}/AGENTS.md` |
+| DeepSeek Harness | `$DSH_HOME/AGENTS.md`（默认 `~/.dsh/AGENTS.md`），其次 `<agentsHome>/AGENTS.md`（默认 `~/.agents/AGENTS.md`） |
 
 ## 包含的规则
 
@@ -16,11 +23,18 @@
 如果还没有个人全局规则：
 
 ```bash
+# Codex
 mkdir -p "${CODEX_HOME:-$HOME/.codex}"
 cp AGENTS.md "${CODEX_HOME:-$HOME/.codex}/AGENTS.md"
+
+# DeepSeek Harness（preset 已挂载 agent-instructions，读取用户级指令链）
+mkdir -p "$HOME/.agents"
+cp AGENTS.md "$HOME/.agents/AGENTS.md"
 ```
 
-如果已有 `~/.codex/AGENTS.md`，请把本目录中 `AGENTS.md` 的章节合并进去，避免覆盖原有约定。Codex 在新会话启动时读取全局规则，因此安装或更新后请开始一个新会话进行验证。
+如果已有同名文件，请把本目录中 `AGENTS.md` 的章节合并进去，避免覆盖原有约定。两个宿主都在会话开始时读取用户级规则，因此安装或更新后请开始一个新会话验证；本次实测中，会话运行期间新增该文件也会被注入。
+
+仓库根目录的 `scripts/sync-deepseek.sh` 会同时同步这两个位置，并做差异检查和备份。
 
 ## 使用边界
 
