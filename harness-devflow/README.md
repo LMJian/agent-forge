@@ -74,6 +74,17 @@ python3 /absolute/path/harness-devflow/scripts/harness.py --repo /path/to/projec
 历史状态兼容只为保护已有工作，不再作为多宿主/多模型适配目标。正常 Codex 路径直接使用本地命令和
 Git 工作树；原有命令桥和外部适配器按项目需要保留，不在默认流程中要求配置。
 
+## DeepSeek Harness
+
+本目录内的 `dsh/` 是 DeepSeek Harness 的 bundle 包。宿主侧模块只注册 `skills/` 下的 16 个 Skill，
+并额外注册入口 Skill `harness-devflow`；运行时仍为 `scripts/harness.py`，不复制第二份 Skill、
+references 或运行时。在 DeepSeek Harness 中以本地目录方式安装 `harness-devflow/dsh/`
+（Plugins → Add plugin，或插件管理器 `install_bundle`）；安装会链接回本仓库，仓库更新后重启宿主
+或新开会话即可读取新版 Skill 正文。
+
+宿主差异（工具名、审批、恢复、委派、worktree）见 [DeepSeek Harness 宿主映射](references/dsh-host.md)。
+协议与验收、分支授权、证据规则不变；`profile=codex` 指流程 profile，与 Codex 应用无关。
+
 ## 16 个 Skills
 
 | Skill | 职责 |

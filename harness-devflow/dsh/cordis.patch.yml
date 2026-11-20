@@ -1,0 +1,6 @@
+# DeepSeek Harness bundle for Harness Devflow.
+# The Host module registers the workflow skills that live beside the Codex
+# manifest, so both hosts read one copy of skills/, references/ and scripts/.
+- insert:
+    - id: harness-devflow-dsh
+      name: '@local/harness-devflow-dsh'

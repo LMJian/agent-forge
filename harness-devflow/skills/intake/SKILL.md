@@ -11,10 +11,10 @@ Include `details.engineering` using [engineering budgets](../../references/engin
 Assess the six areas against the actual change; pin applicable workload/bounds and checks
 before coding. Small edits can explain inapplicability and retain one contract regression.
 
-For `profile=codex`, follow [the Codex contract](../../references/codex-workflow.md).
+For `profile=codex`, follow [the host contract](../../references/codex-workflow.md).
 Produce one decision packet with architecture/interfaces, feasibility probes, test ownership and
 inline tasks. Include the actual user-entry-to-terminal-outcome journey and evidence for each step;
-see the packet example in the Codex contract. Use `run-check` during intake for critical assumptions. An unproven primary outcome
+see the packet example in the host contract. Use `run-check` during intake for critical assumptions. An unproven primary outcome
 blocks full implementation; do not call successful imports/builds proof of product feasibility.
 The same packet is used for a selected design approval and the automatically computed plan.
 

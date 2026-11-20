@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Harness Devflow",
+    "description": "Registers the Harness Devflow workflow skills (flow, intake, plan, implement, review, delivery and related stages) for DeepSeek Harness, running the same Python runtime as the Codex packaging. It adds skills only: no network access and no subprocess until a workflow command runs. The runtime needs Python 3.10+ and Git in the target checkout; turning the plugin off removes these skills."
+  }
+}

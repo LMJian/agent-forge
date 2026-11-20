@@ -17,11 +17,11 @@ Read the returned `review_context` instead of requiring absent intake or plan re
 Do not create development-stage reports for work that happened outside this workflow.
 
 Read `professional_method` from `next`. For `builtin`, perform the review below directly;
-do not prepare a second capability invocation or launch another Codex session. For a selected
+do not prepare a second capability invocation or launch another host session. For a selected
 professional provider, use [capability handoff](../../references/capabilities.md):
 `use-skill review --reason ...`, then `record-skill review --result ...`.
-Confirm that reused native findings cover the current revision and scope. Carry native
-Codex or professional review findings into the final Harness report rather
+Confirm that reused native findings cover the current revision and scope. Carry host-native
+or professional review findings into the final Harness report rather
 than performing a second full review to normalize them. Resolve findings and refresh affected
 evidence before finalizing; code changes after completion require reopening review.
 

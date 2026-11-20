@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Harness Devflow",
+    "description": "为 DeepSeek Harness 注册 Harness Devflow 研发流程 Skill（flow、intake、plan、implement、review、delivery 等阶段），复用与 Codex 插件相同的 Python 运行时。仅注册 Skill：不联网，未执行流程命令前不启动子进程。运行时需要目标仓库具备 Python 3.10+ 与 Git；关闭插件后这些 Skill 随之移除。"
+  }
+}

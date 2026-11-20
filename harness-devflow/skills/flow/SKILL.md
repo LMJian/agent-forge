@@ -6,7 +6,7 @@ description: "Start or resume a Harness project workflow when explicitly selecte
 # Development workflow
 
 Use when Harness is explicitly selected, owns an existing task, or is the configured project
-default. Installation alone does not select Harness for ordinary Codex planning, coding or
+default. Installation alone does not select Harness for ordinary planning, coding or
 review. A question about a workflow does not start one. Resolve the plugin root from this file's location; the consumer
 repository is the user's target checkout. Read [the runtime contract](references/runtime.md).
 Use [workflow ownership](../../references/routing.md) to select one orchestrator. Never start
@@ -24,13 +24,15 @@ normalization do not require additional full semantic reviews.
    Dirty files, a branch prefix, autonomy or a workflow profile are not authorization. Do not use
    raw Git or host tools to bypass this rule; see [branch consent](../../references/branch-consent.md).
 2. Default new projects to `profile=codex`, `assistance=autonomous`, `target=local`.
-   Follow [the Codex contract](../../references/codex-workflow.md): one decision packet, continuous
+   Follow [the host contract](../../references/codex-workflow.md): one decision packet, continuous
    implementation, product verification. Read it before intake. Existing task choices and explicit
    user requirements persist; `standard`/`release` remain for separately requested design stages.
 3. Run the smallest representative feasibility probe before committing to a risky architecture.
    Do not defer proof of the primary product outcome until human acceptance. Prefer one module.
-4. This plugin targets Codex. Prefer builtin CLI/API execution and authorized Codex tools. Do not
-   inspect generic host adapters or model vendors unless an existing project actually uses them.
+4. Prefer builtin CLI/API execution and authorized host tools. On DeepSeek Harness follow
+   [the DSH host mapping](../../references/dsh-host.md) for tool names and approvals; on Codex use
+   its native tools. Do not inspect generic host adapters or model vendors unless an existing
+   project actually uses them.
    GUI, delegation, external delivery and scheduling still require their applicable authorization.
 5. If needed, run `init` and configure real project checks and selected delivery adapters.
    Inspect project scripts rather than inventing a passing check. Run `doctor` with the intended
@@ -42,11 +44,11 @@ normalization do not require additional full semantic reviews.
    user requests only a push; it does not create a PR. See [focused tasks](../../references/focused-tasks.md).
    For a started task, run `next`. Read its action, inputs and returned Skill path. That command
    starts a pending stage and produces a concrete work packet. `status` is read-only.
-   Read only needed or changed `inputs`. Use Codex's existing conversation/context to avoid
+   Read only needed or changed `inputs`. Use the host's existing conversation/context to avoid
    repeated reads; do not run `ack-context` as a routine extra bookkeeping step. It remains
    available for explicitly requested read receipts. Use `context --all` only for missing history.
 7. Execute the returned action and submit the actual result. Repeat `next` while authorized
-   work remains. Finish at the selected endpoint. An internal routing message is not delivery. In Codex mode, `next` computes the plan from
+   work remains. Finish at the selected endpoint. An internal routing message is not delivery. In `profile=codex` mode, `next` computes the plan from
    the accepted intake packet and stops at any selected approval; do not author a duplicate plan.
 
 ## Action handling
@@ -78,7 +80,7 @@ Use `verify-plan` to inspect order, cost and safe reuse, then `verify` for the s
 Run the smallest real critical-path/regression check before expensive broad checks. Use `test-progress` before asking for any human
 operation or reporting completion. Keep automation, authorized agent actions and unavoidable human
 work distinct. Report remaining cases and human batches, not just how many unit tests passed.
-See the [Codex contract](../../references/codex-workflow.md) for evidence reuse and failure recovery.
+See the [host contract](../../references/codex-workflow.md) for evidence reuse and failure recovery.
 
 ## Approval and recovery
 
@@ -91,9 +93,9 @@ actions. `sync-config` accepts an intentional project change and invalidates aff
 `configure-flow` changes actual scope/endpoint, not a failed check's outcome. Choose assistance
 before planning; an active implementation cannot weaken its checkpoint requirements.
 
-Use Codex's native resume, compaction and chat/worktree handoff for conversation continuity.
+Use the host's native resume, compaction and chat/worktree handoff for conversation continuity.
 Harness stores project acceptance and evidence. Optional `handoff --output <new-file>` exports
-those references; it does not move a chat or replace Codex memory. `export` produces a progress report. `abort`
+those references; it does not move a chat or replace host memory. `export` produces a progress report. `abort`
 stops the task; separately cancel any real scheduler when authorized. Neither action deletes worktrees.
 
 For multiple Git repositories, keep one task per repository. At the committed integration
